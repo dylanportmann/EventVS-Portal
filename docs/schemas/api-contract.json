@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dylanportmann.github.io/EventVS-Portal/schemas/api-contract.json",
+  "title": "Event VS Portal API request",
+  "oneOf": [
+    { "$ref": "#/$defs/listRequests" },
+    { "$ref": "#/$defs/getRequest" },
+    { "$ref": "#/$defs/updateRequest" }
+  ],
+  "$defs": {
+    "listRequests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "payload"],
+      "properties": {
+        "action": { "const": "listRequests" },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "page": { "type": "integer", "minimum": 1, "maximum": 10000 },
+            "pageSize": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "filters": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "search": { "type": "string", "maxLength": 200 },
+                "status": { "$ref": "#/$defs/globalStatus" },
+                "dateFrom": { "type": "string", "format": "date" },
+                "dateTo": { "type": "string", "format": "date" },
+                "team": { "$ref": "#/$defs/team" },
+                "late": { "type": ["boolean", "string"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "getRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "requestId"],
+      "properties": {
+        "action": { "const": "getRequest" },
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "updateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "requestId", "expectedRevision", "changes"],
+      "properties": {
+        "action": { "const": "updateRequest" },
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "expectedRevision": { "type": "integer", "minimum": 1 },
+        "changes": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 30,
+          "propertyNames": {
+            "enum": [
+              "title", "labAcronym", "dateStart", "dateEnd", "startTime", "endTime",
+              "fields.type", "fields.participants", "fields.publicTarget", "fields.access",
+              "fields.safety", "fields.rooms", "fields.cateringSpaces", "fields.catering",
+              "fields.furniture", "fields.partitions", "fields.screens", "fields.screenTitle",
+              "fields.itNeeds", "fields.remarks"
+            ]
+          }
+        },
+        "reason": { "type": "string", "maxLength": 2000 },
+        "clientContext": {
+          "type": "object",
+          "description": "Display only. Backend derives authoritative actor from validated Entra token claims.",
+          "properties": {
+            "displayName": { "type": "string", "maxLength": 200 },
+            "username": { "type": "string", "maxLength": 320 }
+          }
+        }
+      }
+    },
+    "team": { "enum": ["", "Event", "Infra", "Sécurité", "Signalétique", "IT"] },
+    "globalStatus": {
+      "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Validé", "Refusé", "Capacité dépassée", "Ressource indisponible"]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "neverReroute": ["Event"],
+  "rules": [
+    { "fields": ["dateStart", "dateEnd", "startTime", "endTime"], "teams": ["ALL_CURRENTLY_REQUIRED_TECHNICAL"] },
+    { "fields": ["fields.rooms", "fields.cateringSpaces", "fields.catering", "fields.furniture", "fields.partitions"], "teams": ["Infra"] },
+    { "fields": ["fields.participants", "fields.access", "fields.publicTarget", "fields.safety"], "teams": ["Sécurité"] },
+    { "fields": ["fields.screens", "fields.screenTitle"], "teams": ["Signalétique"] },
+    { "fields": ["title"], "condition": "fields.screens == true", "teams": ["Signalétique"] },
+    { "fields": ["fields.itNeeds"], "teams": ["IT"] },
+    { "fields": ["fields.remarks"], "teams": ["ALL_CURRENTLY_REQUIRED_TECHNICAL"] }
+  ]
+}
