@@ -70,7 +70,6 @@ export class EventVsApi {
         body: JSON.stringify(payload),
         mode: 'cors',
         credentials: 'omit',
-        cache: 'no-store',
         signal: controller.signal,
       });
     } catch (error) {

@@ -17,6 +17,7 @@ describe('EventVsApi', () => {
       body: JSON.stringify({ action: 'listRequests', payload: { page: 2 }, sessionToken: 'session' }),
     }));
     expect(fetchImpl.mock.calls[0][1].headers).not.toHaveProperty('Authorization');
+    expect(fetchImpl.mock.calls[0][1]).not.toHaveProperty('cache');
   });
 
   it('starts and verifies email challenge without existing session', async () => {
