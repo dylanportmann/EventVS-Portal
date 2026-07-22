@@ -9,7 +9,7 @@ Flux séparé `EventVS Portal API`, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a` :
 1. Trigger HTTP `All`; URL nécessairement publique dans SPA.
 2. `startSession` accepte seulement `dylan.portmann@epfl.ch` et `jennifer.brady@epfl.ch`.
 3. Code 6 chiffres envoyé depuis `event-vs@epfl.ch`, valide 10 minutes; renvoi limité à une fois/minute.
-4. Sessions aléatoires 72 caractères, valides 8 h, stockées liste SharePoint `EventVS Portal Sessions`.
+4. Sessions aléatoires 72 caractères, valides 8 h, stockées liste SharePoint masquée `EventVS Portal Sessions`; `ReadSecurity=2` et `WriteSecurity=2` empêchent membres site de lire/modifier éléments créés par connexion flow.
 5. `listRequests`/`getRequest` vérifient session avant lecture liste métier.
 6. Requêtes navigateur utilisent `text/plain` pour éviter preflight Authorization; aucun cookie.
 7. Entrées sensibles du trigger/actions marquées Secure Inputs.
