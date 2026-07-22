@@ -10,7 +10,9 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 
 Bloquants externes actuels :
 
-- application Entra `EventVS Portal` pas encore créée; client ID absent;
+- application Entra identifiée : client ID `9fa9550c-921f-449e-8ef3-9228e1ff2eb1`;
+- URI enregistrée `https://app-portal.epfl.ch/auth/callback` incompatible avec frontend GitHub Pages;
+- ajouter plateforme SPA et URI `https://dylanportmann.github.io/EventVS-Portal/`;
 - endpoint flow `EventVS Portal API` absent;
 - utilisateurs/IDs Jennifer Brady et Dylan Portmann à confirmer dans trigger;
 - support CORS preflight Power Automate à prouver ou APIM/proxy même origine à ajouter;
