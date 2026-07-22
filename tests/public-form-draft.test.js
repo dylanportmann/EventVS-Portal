@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const sourcePath = path.resolve(process.cwd(), '../page_reservation_v2.html');
 const flowPath = path.resolve(process.cwd(), '../flow_pagereservation_def.json');
+const workspaceFilesAvailable = fs.existsSync(sourcePath) && fs.existsSync(flowPath);
 let dom;
 
 afterEach(() => dom?.window.close());
@@ -24,7 +25,7 @@ function loadForm() {
   return { window: dom.window, document: dom.window.document, fetchMock };
 }
 
-describe('deployed public form draft', () => {
+describe.skipIf(!workspaceFilesAvailable)('workspace public form draft', () => {
   it('saves, resumes, and excludes resource selections', () => {
     const { window, document } = loadForm();
     document.querySelector('#titre').value = 'Forum Valais';
