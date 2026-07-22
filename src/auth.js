@@ -38,7 +38,7 @@ export class AuthService {
 
   async login() {
     const result = await this.client.loginPopup({
-      scopes: ['openid', 'profile', 'email', this.config.apiScope],
+      scopes: [this.config.apiScope],
       prompt: 'select_account',
     });
     this.client.setActiveAccount(result.account);
@@ -60,6 +60,22 @@ export class AuthService {
   async logout() {
     await this.client.logoutPopup({ account: this.account });
   }
+
+  async profile(fetchImpl = fetch) {
+    const token = await this.token();
+    const response = await fetchImpl('https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName', {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      credentials: 'omit',
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('Profil EPFL inaccessible.');
+    const profile = await response.json();
+    return {
+      id: profile.id || '',
+      name: profile.displayName || this.account?.name || '',
+      email: (profile.mail || profile.userPrincipalName || this.account?.username || '').toLowerCase(),
+    };
+  }
 }
 
 export class MockAuthService {
@@ -74,6 +90,7 @@ export class MockAuthService {
   initialize() { return Promise.resolve(this._account); }
   login() { return Promise.resolve(this._account); }
   token() { return Promise.resolve('local-demo-token'); }
+  profile() { return Promise.resolve({ id: 'demo-user', name: this._account.name, email: this._account.username }); }
   logout() { this._account = null; return Promise.resolve(); }
   get account() { return this._account; }
 }

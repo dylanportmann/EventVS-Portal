@@ -3,6 +3,7 @@ import { EventVsApi } from './api.js';
 import { AuthService, MockAuthService } from './auth.js';
 import { getConfig, missingConfig } from './config.js';
 import { MockEventVsApi } from './mock-data.js';
+import { PortalSession } from './session.js';
 import { buildChangeSet, setAtPath } from './routing-rules.js';
 import {
   changePreviewView,
@@ -11,6 +12,7 @@ import {
   editDrawerView,
   errorView,
   gateView,
+  otpView,
   shellView,
 } from './views.js';
 
@@ -21,6 +23,8 @@ class EventVsApp {
     this.auth = null;
     this.api = null;
     this.account = null;
+    this.profile = null;
+    this.portalSession = new PortalSession();
     this.state = {
       route: 'dashboard',
       filters: {},
@@ -47,7 +51,7 @@ class EventVsApp {
     this.auth = this.config.mock ? new MockAuthService() : new AuthService(this.config);
     this.api = this.config.mock
       ? new MockEventVsApi()
-      : new EventVsApi({ apiUrl: this.config.apiUrl, tokenProvider: () => this.auth.token() });
+      : new EventVsApi({ apiUrl: this.config.apiUrl, sessionProvider: () => this.portalSession.get(this.profile?.email)?.token || '' });
 
     try {
       this.account = await this.auth.initialize();
@@ -55,7 +59,7 @@ class EventVsApp {
         this.root.innerHTML = gateView();
         return;
       }
-      await this.navigate();
+      await this.openPortalSession();
     } catch (error) {
       this.root.innerHTML = gateView();
       this.toast(error.message || 'Connexion impossible.', 'error');
@@ -94,6 +98,7 @@ class EventVsApp {
 
     const action = actionTarget.dataset.action;
     if (action === 'login') await this.login(actionTarget);
+    if (action === 'resend-otp') await this.sendOtp();
     if (action === 'logout') await this.logout();
     if (action === 'refresh') await this.refresh();
     if (action === 'back') location.hash = '#/dashboard';
@@ -121,6 +126,11 @@ class EventVsApp {
   }
 
   async onSubmit(event) {
+    if (event.target.id === 'otp-form') {
+      event.preventDefault();
+      await this.verifyOtp(event.target);
+      return;
+    }
     if (event.target.id !== 'edit-form') return;
     event.preventDefault();
     await this.saveEdit(event.target);
@@ -131,7 +141,7 @@ class EventVsApp {
     try {
       this.account = await this.auth.login();
       location.hash ||= '#/dashboard';
-      await this.navigate();
+      await this.openPortalSession();
     } catch (error) {
       this.root.innerHTML = gateView();
       this.toast(error.message || 'Connexion annulée.', 'error');
@@ -139,9 +149,44 @@ class EventVsApp {
   }
 
   async logout() {
+    this.portalSession.clear();
+    this.profile = null;
     await this.auth.logout();
     this.account = null;
     this.root.innerHTML = gateView();
+  }
+
+  async openPortalSession() {
+    this.profile = await this.auth.profile();
+    if (this.config.mock || this.portalSession.get(this.profile.email)) {
+      await this.navigate();
+      return;
+    }
+    await this.sendOtp();
+  }
+
+  async sendOtp() {
+    const email = this.profile?.email || this.account?.username || '';
+    this.root.innerHTML = otpView({ email });
+    try {
+      await this.api.startSession(email);
+      this.toast('Code envoyé.', 'success');
+    } catch (error) {
+      this.root.innerHTML = otpView({ email, error: error.message });
+    }
+  }
+
+  async verifyOtp(form) {
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    button.textContent = 'Vérification…';
+    try {
+      const result = await this.api.verifySession(this.profile.email, form.elements.code.value.trim());
+      this.portalSession.set(result);
+      await this.navigate();
+    } catch (error) {
+      this.root.innerHTML = otpView({ email: this.profile.email, error: error.message });
+    }
   }
 
   async navigate() {

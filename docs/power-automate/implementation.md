@@ -2,6 +2,25 @@
 
 ## Déclencheur et sécurité
 
+### Pilote déployé — contrainte EPFL
+
+Flux séparé `EventVS Portal API`, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a` :
+
+1. Trigger HTTP `All`; URL nécessairement publique dans SPA.
+2. `startSession` accepte seulement `dylan.portmann@epfl.ch` et `jennifer.brady@epfl.ch`.
+3. Code 6 chiffres envoyé depuis `event-vs@epfl.ch`, valide 10 minutes; renvoi limité à une fois/minute.
+4. Sessions aléatoires 72 caractères, valides 8 h, stockées liste SharePoint `EventVS Portal Sessions`.
+5. `listRequests`/`getRequest` vérifient session avant lecture liste métier.
+6. Requêtes navigateur utilisent `text/plain` pour éviter preflight Authorization; aucun cookie.
+7. Entrées sensibles du trigger/actions marquées Secure Inputs.
+8. `updateRequest` désactivé (`501 UPDATE_NOT_READY`) jusqu'au suivi historique/révisions.
+
+Licence constatée : `Flow for Office 365`, `accessPremiumApis=false`. Action HTTP Premium ne peut donc pas appeler Graph `/me` pour valider jeton utilisateur. Test consentement Flow renvoie `AADSTS65001`.
+
+Risque résiduel : gateway renvoie `Access-Control-Allow-Origin: *`; OTP/session protège données, mais quota trigger reste exposé. Architecture cible ci-dessous reste recommandée.
+
+### Cible dès autorisation EPFL
+
 1. Créer `When an HTTP request is received` avec schéma [`api-contract.json`](../schemas/api-contract.json).
 2. Authentication : `Specific users in my tenant`.
 3. Allowed users : comptes confirmés Jennifer Brady et Dylan Portmann. Ne pas laisser champ vide : vide autorise tout tenant.
@@ -10,7 +29,7 @@
 6. Refuser origine autre que `https://dylanportmann.github.io` et origines localhost de test.
 7. Ne jamais faire confiance à `clientContext`. Extraire `oid`, `tid`, nom/email depuis jeton/trigger authentifié.
 
-### Gate CORS obligatoire
+### Gate CORS cible
 
 App navigateur envoie `Authorization`, donc navigateur exécute requête `OPTIONS` avant `POST`. Déploiement GitHub Pages interdit tant que test réel ne confirme réponse preflight avec :
 

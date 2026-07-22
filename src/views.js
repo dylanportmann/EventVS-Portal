@@ -20,6 +20,26 @@ export function gateView({ type = 'login', missing = [], demoUrl = '' } = {}) {
     </main>`;
 }
 
+export function otpView({ email, error = '' } = {}) {
+  return `
+    <main class="gate" id="app-main">
+      <section class="gate-card">
+        <span class="brand-mark" aria-hidden="true">EV</span>
+        <h1>Vérification<br>Event VS</h1>
+        <p>Code envoyé à <strong>${escapeHtml(email || '')}</strong>. Valable 10 minutes.</p>
+        ${error ? `<div class="otp-error" role="alert">${escapeHtml(error)}</div>` : ''}
+        <form class="otp-form" id="otp-form">
+          <label for="otp-code">Code à 6 chiffres</label>
+          <input class="input otp-code" id="otp-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus>
+          <button class="button" type="submit">Valider le code</button>
+        </form>
+        <button class="button ghost" type="button" data-action="resend-otp">Renvoyer le code</button>
+        <button class="button ghost" type="button" data-action="logout">Changer de compte</button>
+        <p class="gate-note">Entra ID confirme compte EPFL. Code email protège données SharePoint sans permission Power Automate supplémentaire.</p>
+      </section>
+    </main>`;
+}
+
 export function shellView({ account, config, active = 'dashboard', body = '' }) {
   const name = account?.name || account?.username || 'Gestionnaire';
   return `

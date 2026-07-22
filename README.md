@@ -1,10 +1,10 @@
 # Event VS — Pilotage
 
-SPA HTML/CSS/JavaScript pour suivi des demandes d'événements EPFL Valais Wallis. Frontend public ne contient aucune donnée métier ni secret; accès données exige jeton Microsoft Entra ID et trigger Power Automate limité aux gestionnaires autorisés.
+SPA HTML/CSS/JavaScript pour suivi des demandes d'événements EPFL Valais Wallis. Frontend public ne contient aucune donnée métier ni secret durable. Accès exige connexion Entra EPFL puis code email Event VS.
 
 ## État
 
-Frontend, moteur règles, client API, mode démo local, tests et documentation backend présents. Production reste volontairement bloquée par placeholders tant que client ID Entra, endpoint Power Automate protégé et test CORS preflight ne sont pas fournis.
+Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate et lecture SharePoint liste/détail. Modification et suivi fin historique/Approvals restent désactivés tant que listes de suivi ne sont pas provisionnées.
 
 ## Développement
 
@@ -28,7 +28,9 @@ npm run check
 5. Exécuter matrice [`docs/test-matrix.md`](docs/test-matrix.md).
 6. Activer GitHub Pages par GitHub Actions.
 
-MSAL Browser utilise Authorization Code + PKCE pour SPA; aucun secret client. Trigger Power Automate doit utiliser `Specific users in my tenant`, avec champ allowed users non vide. Audience cloud public attendue : `https://service.flow.microsoft.com/`.
+MSAL Browser utilise Authorization Code + PKCE pour SPA; aucun secret client. EPFL bloque consentement scope Power Automate et licence actuelle interdit action HTTP Premium. Pilote utilise donc `User.Read` + OTP envoyé uniquement à Jennifer/Dylan. Session aléatoire stockée SharePoint; endpoint public ne retourne aucune donnée sans session valide.
+
+Limite connue : URL callback publique expose quota déclencheur Power Automate aux appels abusifs. Données restent protégées par OTP/session, mais solution cible reste trigger Entra `Specific users in my tenant` ou proxy Kubernetes/APIM.
 
 Documentation Microsoft :
 
@@ -38,9 +40,9 @@ Documentation Microsoft :
 
 ## Contrat API
 
-POST unique. Actions : `listRequests`, `getRequest`, `updateRequest`. Schéma : [`docs/schemas/api-contract.json`](docs/schemas/api-contract.json).
+POST unique. Auth bootstrap : `startSession`, `verifySession`. Données : `listRequests`, `getRequest`, `updateRequest`. `updateRequest` retourne actuellement `UPDATE_NOT_READY` et interface masque édition.
 
-`clientContext` sert uniquement affichage. Backend journalise acteur depuis claims du jeton validé. Concurrence : `expectedRevision`; conflit retourne HTTP 409 `REVISION_CONFLICT`.
+`clientContext` sert uniquement affichage. Identité pilote provient adresse email OTP vérifiée. Future concurrence : `expectedRevision`; conflit HTTP 409 `REVISION_CONFLICT`.
 
 ## Architecture future
 

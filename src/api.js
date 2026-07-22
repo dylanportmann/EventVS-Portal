@@ -9,11 +9,19 @@ export class ApiError extends Error {
 }
 
 export class EventVsApi {
-  constructor({ apiUrl, tokenProvider, fetchImpl = fetch, timeout = 30000 }) {
+  constructor({ apiUrl, sessionProvider = () => '', fetchImpl = fetch, timeout = 30000 }) {
     this.apiUrl = apiUrl;
-    this.tokenProvider = tokenProvider;
+    this.sessionProvider = sessionProvider;
     this.fetchImpl = fetchImpl;
     this.timeout = timeout;
+  }
+
+  startSession(email) {
+    return this.callPublic('startSession', { email });
+  }
+
+  verifySession(email, code) {
+    return this.callPublic('verifySession', { email, code });
   }
 
   listRequests(payload = {}) {
@@ -38,7 +46,16 @@ export class EventVsApi {
   }
 
   async call(action, body = {}) {
-    const token = await this.tokenProvider();
+    const sessionToken = await this.sessionProvider();
+    if (!sessionToken) throw new ApiError('Code de connexion requis.', { status: 401, code: 'SESSION_REQUIRED' });
+    return this.request({ action, ...body, sessionToken });
+  }
+
+  callPublic(action, body = {}) {
+    return this.request({ action, ...body });
+  }
+
+  async request(payload) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeout);
     let response;
@@ -47,11 +64,10 @@ export class EventVsApi {
       response = await this.fetchImpl(this.apiUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain;charset=UTF-8',
           Accept: 'application/json',
         },
-        body: JSON.stringify({ action, ...body }),
+        body: JSON.stringify(payload),
         mode: 'cors',
         credentials: 'omit',
         cache: 'no-store',
@@ -66,13 +82,13 @@ export class EventVsApi {
       clearTimeout(timer);
     }
 
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok || payload.ok === false) {
-      const code = payload.error?.code || (response.status === 409 ? 'REVISION_CONFLICT' : 'HTTP_ERROR');
-      const message = payload.error?.message || this.messageForStatus(response.status);
-      throw new ApiError(message, { status: response.status, code, details: payload.error?.details });
+    const responsePayload = await response.json().catch(() => ({}));
+    if (!response.ok || responsePayload.ok === false) {
+      const code = responsePayload.error?.code || (response.status === 409 ? 'REVISION_CONFLICT' : 'HTTP_ERROR');
+      const message = responsePayload.error?.message || this.messageForStatus(response.status);
+      throw new ApiError(message, { status: response.status, code, details: responsePayload.error?.details });
     }
-    return payload.data ?? payload;
+    return responsePayload.data ?? responsePayload;
   }
 
   messageForStatus(status) {

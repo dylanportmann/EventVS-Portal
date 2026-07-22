@@ -65,6 +65,10 @@ a { color: inherit; }
 .gate h1 { margin: 22px 0 10px; font: 800 clamp(29px, 6vw, 44px)/1.04 'Segoe UI', system-ui, sans-serif; letter-spacing: -.045em; }
 .gate p { margin: 0 auto 26px; max-width: 42ch; color: var(--muted); line-height: 1.6; }
 .gate-note { margin-top: 22px !important; font-size: 13px; }
+.otp-form { display: grid; gap: 12px; width: min(320px, 100%); margin: 0 auto 10px; text-align: left; }
+.otp-form label { color: #565e6b; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.otp-code { min-height: 54px; text-align: center; font-size: 24px; font-weight: 800; letter-spacing: .25em; }
+.otp-error { margin: -10px auto 18px; padding: 11px 13px; border-radius: 9px; background: var(--red-soft); color: #91251f; font-size: 13px; }
 
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
 .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 28px 18px 20px; background: #181a1f; color: #fff; }

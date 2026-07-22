@@ -3,17 +3,39 @@
   "$id": "https://dylanportmann.github.io/EventVS-Portal/schemas/api-contract.json",
   "title": "Event VS Portal API request",
   "oneOf": [
+    { "$ref": "#/$defs/startSession" },
+    { "$ref": "#/$defs/verifySession" },
     { "$ref": "#/$defs/listRequests" },
     { "$ref": "#/$defs/getRequest" },
     { "$ref": "#/$defs/updateRequest" }
   ],
   "$defs": {
+    "startSession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "email"],
+      "properties": {
+        "action": { "const": "startSession" },
+        "email": { "type": "string", "format": "email", "maxLength": 320 }
+      }
+    },
+    "verifySession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "email", "code"],
+      "properties": {
+        "action": { "const": "verifySession" },
+        "email": { "type": "string", "format": "email", "maxLength": 320 },
+        "code": { "type": "string", "pattern": "^[0-9]{6}$" }
+      }
+    },
     "listRequests": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action", "payload"],
+      "required": ["action", "payload", "sessionToken"],
       "properties": {
         "action": { "const": "listRequests" },
+        "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "payload": {
           "type": "object",
           "additionalProperties": false,
@@ -39,18 +61,20 @@
     "getRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action", "requestId"],
+      "required": ["action", "requestId", "sessionToken"],
       "properties": {
         "action": { "const": "getRequest" },
+        "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }
       }
     },
     "updateRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action", "requestId", "expectedRevision", "changes"],
+      "required": ["action", "requestId", "expectedRevision", "changes", "sessionToken"],
       "properties": {
         "action": { "const": "updateRequest" },
+        "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
         "expectedRevision": { "type": "integer", "minimum": 1 },
         "changes": {
@@ -78,6 +102,7 @@
         }
       }
     },
+    "sessionToken": { "type": "string", "minLength": 72, "maxLength": 72 },
     "team": { "enum": ["", "Event", "Infra", "Sécurité", "Signalétique", "IT"] },
     "globalStatus": {
       "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Validé", "Refusé", "Capacité dépassée", "Ressource indisponible"]

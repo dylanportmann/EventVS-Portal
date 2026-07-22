@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changePreviewView, dashboardView } from '../src/views.js';
+import { changePreviewView, dashboardView, otpView } from '../src/views.js';
 
 describe('views', () => {
   it('escapes API strings before rendering', () => {
@@ -23,5 +23,11 @@ describe('views', () => {
     });
     expect(html).toContain('Sécurité');
     expect(html).toContain('Validation Event initiale jamais relancée');
+  });
+
+  it('renders OTP screen without trusting email HTML', () => {
+    const html = otpView({ email: '<img src=x>@epfl.ch' });
+    expect(html).not.toContain('<img src=x>');
+    expect(html).toContain('autocomplete="one-time-code"');
   });
 });
