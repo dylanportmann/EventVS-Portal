@@ -49,4 +49,14 @@ describe('EventVsApi', () => {
     const api = new EventVsApi({ apiUrl: 'https://api.example.test', sessionProvider: () => 'session', fetchImpl: vi.fn().mockRejectedValue(new Error('DNS')) });
     await expect(api.getRequest('42')).rejects.toBeInstanceOf(ApiError);
   });
+
+  it('calls fetch without binding the API instance as receiver', async () => {
+    const fetchImpl = vi.fn(function () {
+      expect(this).toBeUndefined();
+      return Promise.resolve(response({ ok: true, data: { accepted: true } }));
+    });
+    const api = new EventVsApi({ apiUrl: 'https://api.example.test', fetchImpl });
+
+    await expect(api.startSession('dylan.portmann@epfl.ch')).resolves.toEqual({ accepted: true });
+  });
 });

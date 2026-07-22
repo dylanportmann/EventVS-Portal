@@ -61,7 +61,10 @@ export class EventVsApi {
     let response;
 
     try {
-      response = await this.fetchImpl(this.apiUrl, {
+      // Safari rejects Window.fetch when a class instance becomes its receiver.
+      // Detach implementation before calling it so native fetch keeps valid context.
+      const fetchImpl = this.fetchImpl;
+      response = await fetchImpl(this.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'text/plain;charset=UTF-8',
