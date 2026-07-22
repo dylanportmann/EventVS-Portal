@@ -37,12 +37,11 @@ export class AuthService {
   }
 
   async login() {
-    const result = await this.client.loginPopup({
+    await this.client.loginRedirect({
       scopes: [this.config.apiScope],
       prompt: 'select_account',
     });
-    this.client.setActiveAccount(result.account);
-    return result.account;
+    return null;
   }
 
   async token() {
@@ -58,22 +57,17 @@ export class AuthService {
   }
 
   async logout() {
-    await this.client.logoutPopup({ account: this.account });
+    await this.client.logoutRedirect({ account: this.account });
   }
 
-  async profile(fetchImpl = fetch) {
-    const token = await this.token();
-    const response = await fetchImpl('https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName', {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      credentials: 'omit',
-      cache: 'no-store',
-    });
-    if (!response.ok) throw new Error('Profil EPFL inaccessible.');
-    const profile = await response.json();
+  async profile() {
+    const account = this.account;
+    if (!account) throw new Error('AUTH_REQUIRED');
+    const claims = account.idTokenClaims || {};
     return {
-      id: profile.id || '',
-      name: profile.displayName || this.account?.name || '',
-      email: (profile.mail || profile.userPrincipalName || this.account?.username || '').toLowerCase(),
+      id: claims.oid || account.localAccountId || '',
+      name: claims.name || account.name || '',
+      email: String(claims.email || claims.preferred_username || account.username || '').toLowerCase(),
     };
   }
 }

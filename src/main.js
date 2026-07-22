@@ -139,9 +139,12 @@ class EventVsApp {
   async login(button) {
     button.disabled = true;
     try {
-      this.account = await this.auth.login();
-      location.hash ||= '#/dashboard';
-      await this.openPortalSession();
+      const account = await this.auth.login();
+      if (account) {
+        this.account = account;
+        location.hash ||= '#/dashboard';
+        await this.openPortalSession();
+      }
     } catch (error) {
       this.root.innerHTML = gateView();
       this.toast(error.message || 'Connexion annulée.', 'error');
