@@ -4,6 +4,7 @@ import { AuthService, MockAuthService } from './auth.js';
 import { getConfig, missingConfig } from './config.js';
 import { MockEventVsApi } from './mock-data.js';
 import { PortalSession } from './session.js';
+import { AUTO_REFRESH_INTERVAL_MS, canAutoRefresh, changed } from './polling.js';
 import { buildChangeSet, setAtPath } from './routing-rules.js';
 import {
   changePreviewView,
@@ -36,6 +37,8 @@ class EventVsApp {
       changeSet: null,
     };
     this.searchTimer = null;
+    this.autoRefreshTimer = null;
+    this.polling = false;
     this.bindGlobalEvents();
   }
 
@@ -78,6 +81,8 @@ class EventVsApp {
     this.root.addEventListener('change', (event) => this.onChange(event));
     this.root.addEventListener('submit', (event) => this.onSubmit(event));
     window.addEventListener('hashchange', () => this.account && this.navigate());
+    window.addEventListener('focus', () => this.poll());
+    document.addEventListener('visibilitychange', () => this.poll());
   }
 
   async onClick(event) {
@@ -152,6 +157,7 @@ class EventVsApp {
   }
 
   async logout() {
+    this.stopAutoRefresh();
     this.portalSession.clear();
     this.profile = null;
     await this.auth.logout();
@@ -163,6 +169,7 @@ class EventVsApp {
     this.profile = await this.auth.profile();
     if (this.config.mock || this.portalSession.get(this.profile.email)) {
       await this.navigate();
+      this.startAutoRefresh();
       return;
     }
     await this.sendOtp();
@@ -187,6 +194,7 @@ class EventVsApp {
       const result = await this.api.verifySession(this.profile.email, form.elements.code.value.trim());
       this.portalSession.set(result);
       await this.navigate();
+      this.startAutoRefresh();
     } catch (error) {
       this.root.innerHTML = otpView({ email: this.profile.email, error: error.message });
     }
@@ -239,6 +247,58 @@ class EventVsApp {
   async refresh() {
     if (this.state.route === 'detail' && this.state.request) await this.loadDetail(this.state.request.id);
     else await this.loadDashboard();
+  }
+
+  startAutoRefresh() {
+    if (this.autoRefreshTimer) return;
+    this.autoRefreshTimer = window.setInterval(() => this.poll(), AUTO_REFRESH_INTERVAL_MS);
+  }
+
+  stopAutoRefresh() {
+    if (!this.autoRefreshTimer) return;
+    window.clearInterval(this.autoRefreshTimer);
+    this.autoRefreshTimer = null;
+  }
+
+  async poll() {
+    if (!canAutoRefresh({
+      account: this.account,
+      profile: this.profile,
+      loading: this.state.loading,
+      editOpen: this.state.editOpen,
+      polling: this.polling,
+      visibilityState: document.visibilityState,
+    })) return;
+
+    this.polling = true;
+    const route = this.state.route;
+    const requestId = this.state.request?.id;
+    try {
+      if (route === 'detail' && requestId) {
+        const latest = await this.api.getRequest(requestId);
+        if (this.state.route === route && this.state.request?.id === requestId && !this.state.editOpen && changed(this.state.request, latest)) {
+          this.state.request = latest;
+          this.renderShell(detailView(latest), 'detail');
+        }
+        return;
+      }
+
+      if (route === 'dashboard') {
+        const latest = await this.api.listRequests({
+          page: this.state.page,
+          pageSize: this.config.pageSize,
+          filters: this.state.filters,
+        });
+        if (this.state.route === route && !this.state.editOpen && changed(this.state.result, latest)) {
+          this.state.result = latest;
+          this.renderShell(dashboardView(this.state));
+        }
+      }
+    } catch {
+      // Manual refresh keeps visible error handling; background polling stays quiet.
+    } finally {
+      this.polling = false;
+    }
   }
 
   updateFilters() {

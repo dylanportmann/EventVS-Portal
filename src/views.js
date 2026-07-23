@@ -124,7 +124,7 @@ export function detailView(request, { loading = false } = {}) {
     <button class="back-link" data-action="back">← Retour aux demandes</button>
     <section class="detail-hero">
       <div><span class="status ${slug(request.status)}">${escapeHtml(request.status)}</span><h1>${escapeHtml(request.title)}</h1><div class="detail-meta"><span>${escapeHtml(request.id)}</span><span>${formatDate(request.dateStart)} · ${escapeHtml(request.startTime)}–${escapeHtml(request.endTime)}</span><span>${escapeHtml(request.organizer?.name)}</span></div></div>
-      <div><span class="revision">Révision ${request.revision}</span>${editable ? '<button class="button" style="margin-top:12px;display:flex" data-action="edit">Modifier</button>' : ''}</div>
+      <div class="detail-actions"><span class="revision">Révision ${request.revision}</span><button class="button secondary" data-action="refresh">Actualiser</button>${editable ? '<button class="button" data-action="edit">Modifier</button>' : ''}</div>
     </section>
     <div class="detail-grid">
       <div>
