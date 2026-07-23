@@ -164,9 +164,18 @@ function timeline(items = []) {
   return `<div class="timeline">${items.map((item) => `<article class="timeline-item"><span class="timeline-dot"></span><div class="timeline-content"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.detail || '')}</p><time datetime="${escapeHtml(item.at)}">${formatDate(item.at, true)} · ${escapeHtml(item.actor || 'Système')}</time></div></article>`).join('')}</div>`;
 }
 
-function history(items = []) {
+export function history(items = []) {
   if (!items.length) return fallbackHistory();
-  return `<div class="timeline">${items.map((item) => `<article class="timeline-item"><span class="timeline-dot"></span><div class="timeline-content"><strong>Révision ${item.revision} · ${escapeHtml(item.actor)}</strong><p>${escapeHtml(item.reason || 'Sans motif.')}</p>${(item.changes || []).map((change) => `<p><b>${escapeHtml(change.field)}</b> : ${escapeHtml(displayValue(change.before))} → ${escapeHtml(displayValue(change.after))}</p>`).join('')}<p>Équipes relancées : ${escapeHtml(item.reroutedTeams?.join(', ') || 'aucune')}</p><time>${formatDate(item.at, true)}</time></div></article>`).join('')}</div>`;
+  return `<div class="timeline">${items.map((item) => {
+    const changes = Array.isArray(item.changes)
+      ? item.changes
+      : Object.entries(item.changes || {}).map(([field, after]) => ({
+        field,
+        before: getAtPath(item.before || {}, field),
+        after,
+      }));
+    return `<article class="timeline-item"><span class="timeline-dot"></span><div class="timeline-content"><strong>Révision ${item.revision} · ${escapeHtml(item.actor || 'Système')}</strong><p>${escapeHtml(item.reason || 'Sans motif.')}</p>${changes.map((change) => `<p><b>${escapeHtml(change.field)}</b> : ${escapeHtml(displayValue(change.before))} → ${escapeHtml(displayValue(change.after))}</p>`).join('')}<p>Équipes relancées : ${escapeHtml(item.reroutedTeams?.join(', ') || 'aucune')}</p><time>${formatDate(item.at, true)}</time></div></article>`;
+  }).join('')}</div>`;
 }
 
 function reservations(items = []) {

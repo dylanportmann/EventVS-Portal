@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changePreviewView, dashboardView, otpView } from '../src/views.js';
+import { changePreviewView, dashboardView, history, otpView } from '../src/views.js';
 
 describe('views', () => {
   it('escapes API strings before rendering', () => {
@@ -29,5 +29,20 @@ describe('views', () => {
     const html = otpView({ email: '<img src=x>@epfl.ch' });
     expect(html).not.toContain('<img src=x>');
     expect(html).toContain('autocomplete="one-time-code"');
+  });
+
+  it('renders persisted object changes returned by Power Automate', () => {
+    const html = history([{
+      revision: 3,
+      actor: 'dylan.portmann@epfl.ch',
+      reason: 'Capacité ajustée',
+      changes: { 'fields.participants': 80 },
+      before: { fields: { participants: 50 } },
+      reroutedTeams: ['Sécurité'],
+      at: '2026-07-22T15:00:00Z',
+    }]);
+    expect(html).toContain('fields.participants');
+    expect(html).toContain('50 → 80');
+    expect(html).toContain('Sécurité');
   });
 });
