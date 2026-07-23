@@ -23,6 +23,10 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 - formulaire public avec brouillon local/autosave et expiration 30 jours déployé;
 - recette réelle Infra validée : deux runs obsolètes annulés, nouvelle Approval approuvée, statut global `Validé`;
 - migration pilote inspectée : seule ancienne Approval groupée déjà terminée/refusée, donc aucune carte ouverte à annuler ou tâche à recréer;
+- annulation complète déployée : bouton confirmé, job asynchrone, annulation runs, suppression Outlook par ID exact, corbeille SharePoint et tombstone minimal;
+- flux `EventVS Delete Event` actif, ID `6eecfa5a-f38a-47e7-98f9-96a036c93370`; listes `EventVS Deletion Jobs` (`2bef60da-8eb4-44ea-906a-4d541bbd78a9`), `EventVSReservations` (`db8d545a-fb9c-4dd9-959b-1b6691e684ee`) et `EventVS Runtime Links` (`f40102be-60a6-484c-a304-37bea9cd8efc`) actives;
+- recette réelle annulation validée deux fois : demande moderne supprimée, run initial annulé, deux liens runtime supprimés, email envoyé; triple soumission identique retourne même job HTTP 202;
+- garde legacy validée : demande avec réservations non suivies retourne HTTP 409 `CANCELLATION_BLOCKED`, sans mutation;
 - CORS gateway `*`; quota endpoint reste exposé;
 - tests portail couvrent routage, agrégation, corrélation, migration, aperçu et historique;
 

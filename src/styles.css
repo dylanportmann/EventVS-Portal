@@ -103,6 +103,9 @@ h1, h2, h3 { font-family: 'Segoe UI', system-ui, sans-serif; }
 .button.secondary:hover { background: #f0f1f3; }
 .button.ghost { padding-inline: 9px; background: transparent; color: var(--muted); }
 .button.danger { border-color: #f2c1bd; background: #fff; color: #b2231d; }
+.button.danger:hover { border-color: var(--red-dark); background: var(--red-soft); color: var(--red-dark); }
+.button.danger.solid { border-color: var(--red-dark); background: var(--red-dark); color: #fff; }
+.button.danger.solid:hover { background: #981b16; }
 .button:disabled { cursor: not-allowed; opacity: .55; }
 
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; margin-bottom: 18px; }
@@ -132,7 +135,8 @@ h1, h2, h3 { font-family: 'Segoe UI', system-ui, sans-serif; }
 .status { display: inline-flex; align-items: center; min-height: 25px; padding: 0 9px; border-radius: 999px; background: #eef0f3; color: #515866; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .status.valide, .status.approuve { background: var(--green-soft); color: var(--green); }
 .status.refuse, .status.obsolete, .status.capacite-depassee, .status.ressource-indisponible { background: var(--red-soft); color: #ad2822; }
-.status.en-attente, .status.validation-event-en-cours, .status.etude-technique, .status.modification-en-cours { background: var(--amber-soft); color: var(--amber); }
+.status.en-attente, .status.validation-event-en-cours, .status.etude-technique, .status.modification-en-cours, .status.annulation-en-cours { background: var(--amber-soft); color: var(--amber); }
+.status.suppression-bloquee { background: var(--red-soft); color: #ad2822; }
 .status.approuve-reporte { background: var(--blue-soft); color: var(--blue); }
 .empty { padding: 58px 24px; text-align: center; color: var(--muted); }
 .empty h2 { margin: 0 0 7px; color: var(--ink); font-size: 18px; }
@@ -205,6 +209,20 @@ h1, h2, h3 { font-family: 'Segoe UI', system-ui, sans-serif; }
 .change-new { color: var(--green); font-weight: 600; }
 .reroute { padding: 12px; border-radius: 9px; background: var(--amber-soft); color: #744600; font-size: 12px; line-height: 1.5; }
 .drawer-actions { position: sticky; z-index: 3; bottom: 0; display: flex; justify-content: flex-end; gap: 9px; padding: 15px 24px; border-top: 1px solid var(--line); background: rgb(255 255 255 / 96%); backdrop-filter: blur(12px); }
+
+.confirm-backdrop { position: fixed; inset: 0; z-index: 40; background: rgb(12 16 24 / 58%); backdrop-filter: blur(3px); }
+.confirm-modal { position: fixed; z-index: 41; top: 50%; left: 50%; width: min(560px, calc(100% - 28px)); max-height: calc(100vh - 28px); overflow-y: auto; transform: translate(-50%, -50%); border-radius: 16px; background: #fff; box-shadow: 0 30px 100px rgb(9 13 22 / 36%); }
+.confirm-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px 24px 17px; border-bottom: 1px solid var(--line); }
+.confirm-head h2 { margin: 0; font-size: 20px; }
+.confirm-body { display: grid; gap: 18px; padding: 22px 24px 24px; }
+.destructive-warning { padding: 15px; border: 1px solid #efbbb6; border-radius: 10px; background: var(--red-soft); }
+.destructive-warning strong, .destructive-warning span { display: block; }
+.destructive-warning span { margin-top: 4px; color: #7d4541; font-size: 12px; }
+.destructive-warning p { margin: 11px 0 0; color: #6e3733; font-size: 13px; line-height: 1.5; }
+.confirm-check { display: flex; gap: 10px; padding: 13px; border: 1px solid #d7d9de; border-radius: 9px; color: #393f49; font-size: 13px; font-weight: 700; line-height: 1.45; }
+.confirm-check input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--red); }
+.confirm-error { padding: 11px 13px; border-radius: 9px; background: var(--red-soft); color: #91251f; font-size: 13px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 9px; }
 
 .toast-region { position: fixed; z-index: 60; top: 18px; right: 18px; display: grid; gap: 9px; width: min(390px, calc(100vw - 36px)); }
 .toast { padding: 13px 15px; border: 1px solid #d9dce1; border-radius: 10px; background: #fff; box-shadow: var(--shadow); font-size: 13px; line-height: 1.45; }

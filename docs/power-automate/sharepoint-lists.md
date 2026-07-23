@@ -53,6 +53,18 @@ Acteur autoritatif : claim `oid` du jeton validé, jamais `clientContext` envoy�
 
 Statuts : `À vérifier`, `Réservé`, `Remplacé`, `Échec`, `Correspondance ambiguë`.
 
+Chaque création Outlook écrit immédiatement `Calendrier + OutlookEventId`. Marqueur `ReservationTracking|Complete` dans `EventVS Runtime Links` confirme inventaire exhaustif. Ancienne demande sans marqueur ni ID exact bloque suppression.
+
+## `EventVS Deletion Jobs`
+
+`Title` et `RequestId` identifient demande. Colonnes : `RequestItemId`, `ExpectedRevision`, `Status`, `ActorEmail`, `Reason`, `RequestTitle`, `OrganizerEmail`, dates, `StepStateJson`, `ErrorJson`, `DeletedCountsJson`, `EmailStatus`, `Attempt`.
+
+Statuts : `Prepared`, `Queued`, `Running`, `Blocked`, `Completed`, `CompletedWithWarning`. Après succès, vider titre événement, organisateur, motif, IDs externes et payloads; conserver seulement ID demande, acteur, dates, résultat et compteurs.
+
+## `EventVS Runtime Links`
+
+`RequestId`, `RequestItemId`, `Kind`, `FlowId`, `RunId`, `Status`, dates et erreur. Types initiaux : `InitialOrchestration` et `ReservationTracking`. Supprimer liens après annulation réussie.
+
 ## EventVSManagers
 
 `Utilisateur` (Personne), `Actif` (Oui/non), `Role` (Gestionnaire/Lecture), `AjouteUtc`, `AjoutePar`.

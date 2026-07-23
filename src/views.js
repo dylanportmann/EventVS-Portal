@@ -121,11 +121,12 @@ function requestsTable(result = {}) {
 export function detailView(request, { loading = false } = {}) {
   if (loading || !request) return loadingView('Chargement du dossier…');
   const editable = request.allowedActions?.includes('update');
+  const cancellable = request.allowedActions?.includes('cancel');
   return `
     <button class="back-link" data-action="back">← Retour aux demandes</button>
     <section class="detail-hero">
       <div><span class="status ${slug(request.status)}">${escapeHtml(request.status)}</span><h1>${escapeHtml(request.title)}</h1><div class="detail-meta"><span>${escapeHtml(request.id)}</span><span>${formatDate(request.dateStart)} · ${escapeHtml(request.startTime)}–${escapeHtml(request.endTime)}</span><span>${escapeHtml(request.organizer?.name)}</span></div></div>
-      <div class="detail-actions"><span class="revision">Révision ${request.revision}</span><button class="button secondary" data-action="refresh">Actualiser</button>${editable ? '<button class="button" data-action="edit">Modifier</button>' : ''}</div>
+      <div class="detail-actions"><span class="revision">Révision ${request.revision}</span><button class="button secondary" data-action="refresh">Actualiser</button>${editable ? '<button class="button" data-action="edit">Modifier</button>' : ''}${cancellable ? '<button class="button danger" data-action="open-cancel">Annuler et supprimer</button>' : ''}</div>
     </section>
     <div class="detail-grid">
       <div>
@@ -139,6 +140,37 @@ export function detailView(request, { loading = false } = {}) {
         <section class="panel section"><div class="section-head"><h2>Point d'attente</h2></div><p style="margin:0;font-size:14px">${escapeHtml(request.currentStep || 'Historique non disponible')}</p><p class="subtle">${escapeHtml(request.waitingFor?.join(', ') || 'Aucune personne en attente')}</p></section>
       </div>
     </div>`;
+}
+
+export function cancelDialogView(request) {
+  return `
+    <div class="confirm-backdrop" data-action="close-cancel"></div>
+    <section class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="cancel-title" aria-describedby="cancel-warning">
+      <header class="confirm-head">
+        <div><p class="eyebrow">Action destructive</p><h2 id="cancel-title">Annuler et supprimer l’événement</h2></div>
+        <button class="close" type="button" data-action="close-cancel" aria-label="Fermer">×</button>
+      </header>
+      <form id="cancel-form" class="confirm-body">
+        <div class="destructive-warning" id="cancel-warning">
+          <strong>${escapeHtml(request.title)}</strong>
+          <span>Référence ${escapeHtml(request.id)} · révision ${Number(request.revision) || 1}</span>
+          <p>Cette action annule les Approvals ouvertes, libère les réservations Outlook, supprime les données liées puis place la demande SharePoint dans la corbeille pendant 30 jours.</p>
+        </div>
+        <div class="field">
+          <label for="cancel-reason">Motif facultatif</label>
+          <textarea class="textarea" id="cancel-reason" name="reason" maxlength="2000" placeholder="Contexte envoyé à l’organisateur…"></textarea>
+        </div>
+        <label class="confirm-check" for="cancel-confirmation">
+          <input id="cancel-confirmation" name="confirmation" type="checkbox" required>
+          <span>Je confirme l’annulation définitive et la suppression de cet événement.</span>
+        </label>
+        <div class="confirm-error" id="cancel-error" role="alert" hidden></div>
+        <footer class="confirm-actions">
+          <button type="button" class="button secondary" data-action="close-cancel">Retour</button>
+          <button type="submit" class="button danger solid" id="confirm-cancel" disabled>Annuler et supprimer</button>
+        </footer>
+      </form>
+    </section>`;
 }
 
 function requestData(request) {

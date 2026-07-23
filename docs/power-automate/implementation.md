@@ -127,6 +127,19 @@ Après chaque réponse valide, recalculer :
 
 Validation Event initiale reste dans `approvalState.Event`; révision technique ne la recrée jamais.
 
+## `cancelEvent` et suppression complète
+
+`cancelEvent` accepte `requestId`, `expectedRevision`, `confirmation=true` et motif facultatif. Session validée fournit acteur; `clientContext` ignoré. Jennifer Brady et Dylan Portmann sont autorisés.
+
+1. Vérifier confirmation, révision/ETag et inventaire exact des réservations. Ressources anciennes sans `OutlookEventId`/marqueur complet → HTTP 409 `CANCELLATION_BLOCKED`, zéro mutation.
+2. Créer/réutiliser job `Prepared`, écrire demande révision N+1 avec statut `Annulation en cours`, puis passer job `Queued`. Job déjà `Queued/Running` retourne état existant.
+3. Flux `EventVS Delete Event` neutralise tâches Approval avant `CancelFlowRun`; run ouvert sans ID bloque suppression. Approvals terminées restent historique Microsoft.
+4. Supprimer événements Outlook uniquement par `Calendrier + OutlookEventId`, puis lignes liées et liens de runs. Recycler demande SharePoint seulement après toutes étapes réussies.
+5. Envoyer confirmation organisateur + acteur. Échec email après trois essais donne `CompletedWithWarning`, sans restaurer événement.
+6. Échec destructif donne `Blocked`, conserve demande, publie `Suppression bloquée` et permet reprise idempotente.
+
+`getCancellationStatus` expose uniquement statut, étapes, erreurs, résultat email et compteurs de suppressions. Job terminé devient tombstone minimal.
+
 ## Génération et préflight
 
 ```bash
@@ -136,6 +149,9 @@ EVENTVS_TEAM_APPROVAL_FLOW_ID=<GUID_FLUX> \
 EVENTVS_FLOW_MANAGEMENT_CONNECTION=<CONNEXION> \
   python3 build_portal_api.py
 python3 verify_approval_flows.py --deployment
+python3 build_cancellation_provisioner.py
+python3 instrument_event_flow_cancellation.py
+python3 build_delete_event.py --deletion-list-id <GUID_LISTE>
 ```
 
 `Power Automate Management` est connecteur Standard. `CancelFlowRun` prend environnement, flow ID et run ID. Annulation reste best-effort; corrélation SharePoint reste garantie autoritative.
@@ -148,6 +164,13 @@ python3 ../deploy_approval_revision.py --har <HAR_FRAIS> --apply
 ```
 
 Si plusieurs connexions existent, préciser `--flow-management-connection <NOM>`.
+
+Annulation complète :
+
+```bash
+python3 ../deploy_event_cancellation.py --har <HAR_FRAIS>
+python3 ../deploy_event_cancellation.py --har <HAR_FRAIS> --apply
+```
 
 ## Backfill
 

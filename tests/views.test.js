@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changePreviewView, dashboardView, detailView, history, otpView } from '../src/views.js';
+import { cancelDialogView, changePreviewView, dashboardView, detailView, history, otpView } from '../src/views.js';
 
 describe('views', () => {
   it('escapes API strings before rendering', () => {
@@ -49,6 +49,23 @@ describe('views', () => {
     const html = otpView({ email: '<img src=x>@epfl.ch' });
     expect(html).not.toContain('<img src=x>');
     expect(html).toContain('autocomplete="one-time-code"');
+  });
+
+  it('renders destructive action only when backend authorizes it', () => {
+    const request = {
+      id: '42', revision: 2, title: 'Event', status: 'Validé', dateStart: '2026-09-01', startTime: '09:00', endTime: '17:00',
+      organizer: {}, fields: {}, approvals: [], timeline: [], history: [], reservations: [], waitingFor: [], allowedActions: ['cancel'],
+    };
+    expect(detailView(request)).toContain('Annuler et supprimer');
+    expect(detailView({ ...request, allowedActions: [] })).not.toContain('Annuler et supprimer');
+  });
+
+  it('requires checkbox in cancellation dialog and escapes request data', () => {
+    const html = cancelDialogView({ id: '<42>', revision: 2, title: '<img src=x>' });
+    expect(html).not.toContain('<img src=x>');
+    expect(html).toContain('name="confirmation" type="checkbox" required');
+    expect(html).toContain('id="confirm-cancel" disabled');
+    expect(html).toContain('maxlength="2000"');
   });
 
   it('renders persisted object changes returned by Power Automate', () => {

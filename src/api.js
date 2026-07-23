@@ -45,6 +45,19 @@ export class EventVsApi {
     });
   }
 
+  cancelEvent({ requestId, expectedRevision, confirmation, reason = '' }) {
+    return this.call('cancelEvent', {
+      requestId,
+      expectedRevision,
+      confirmation: confirmation === true,
+      reason,
+    });
+  }
+
+  getCancellationStatus(requestId) {
+    return this.call('getCancellationStatus', { requestId });
+  }
+
   async call(action, body = {}) {
     const sessionToken = await this.sessionProvider();
     if (!sessionToken) throw new ApiError('Code de connexion requis.', { status: 401, code: 'SESSION_REQUIRED' });

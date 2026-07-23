@@ -7,7 +7,9 @@
     { "$ref": "#/$defs/verifySession" },
     { "$ref": "#/$defs/listRequests" },
     { "$ref": "#/$defs/getRequest" },
-    { "$ref": "#/$defs/updateRequest" }
+    { "$ref": "#/$defs/updateRequest" },
+    { "$ref": "#/$defs/cancelEvent" },
+    { "$ref": "#/$defs/getCancellationStatus" }
   ],
   "$defs": {
     "startSession": {
@@ -102,6 +104,29 @@
         }
       }
     },
+    "cancelEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "requestId", "expectedRevision", "confirmation", "sessionToken"],
+      "properties": {
+        "action": { "const": "cancelEvent" },
+        "sessionToken": { "$ref": "#/$defs/sessionToken" },
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "expectedRevision": { "type": "integer", "minimum": 1 },
+        "confirmation": { "const": true },
+        "reason": { "type": "string", "maxLength": 2000 }
+      }
+    },
+    "getCancellationStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "requestId", "sessionToken"],
+      "properties": {
+        "action": { "const": "getCancellationStatus" },
+        "sessionToken": { "$ref": "#/$defs/sessionToken" },
+        "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
     "approvalTask": {
       "type": "object",
       "required": ["team", "taskKey", "scopeHash", "revision", "deliveryStatus"],
@@ -128,7 +153,7 @@
     "sessionToken": { "type": "string", "minLength": 72, "maxLength": 72 },
     "team": { "enum": ["", "Event", "Infra", "Sécurité", "Signalétique", "IT"] },
     "globalStatus": {
-      "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Validé", "Refusé", "Capacité dépassée", "Ressource indisponible"]
+      "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Annulation en cours", "Suppression bloquée", "Validé", "Refusé", "Capacité dépassée", "Ressource indisponible"]
     }
   }
 }

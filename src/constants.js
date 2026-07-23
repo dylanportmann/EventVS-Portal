@@ -3,6 +3,8 @@ export const GLOBAL_STATUSES = [
   'Validation Event en cours',
   'Étude technique',
   'Modification en cours',
+  'Annulation en cours',
+  'Suppression bloquée',
   'Validé',
   'Refusé',
   'Capacité dépassée',

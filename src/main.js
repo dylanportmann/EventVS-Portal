@@ -8,6 +8,7 @@ import { AUTO_REFRESH_INTERVAL_MS, canAutoRefresh, changed } from './polling.js'
 import { buildChangeSet, setAtPath } from './routing-rules.js';
 import {
   changePreviewView,
+  cancelDialogView,
   dashboardView,
   detailView,
   editDrawerView,
@@ -35,9 +36,13 @@ class EventVsApp {
       loading: false,
       editOpen: false,
       changeSet: null,
+      cancelOpen: false,
+      canceling: false,
+      cancellation: null,
     };
     this.searchTimer = null;
     this.autoRefreshTimer = null;
+    this.cancellationTimer = null;
     this.polling = false;
     this.bindGlobalEvents();
   }
@@ -76,6 +81,7 @@ class EventVsApp {
         location.hash = `#/requests/${encodeURIComponent(event.target.dataset.requestId)}`;
       }
       if (event.key === 'Escape' && this.state.editOpen) this.closeEdit();
+      if (event.key === 'Escape' && this.state.cancelOpen && !this.state.canceling) this.closeCancel();
     });
     this.root.addEventListener('input', (event) => this.onInput(event));
     this.root.addEventListener('change', (event) => this.onChange(event));
@@ -109,6 +115,8 @@ class EventVsApp {
     if (action === 'back') location.hash = '#/dashboard';
     if (action === 'edit') this.openEdit();
     if (action === 'close-edit') this.closeEdit();
+    if (action === 'open-cancel') this.openCancel();
+    if (action === 'close-cancel' && !this.state.canceling) this.closeCancel();
   }
 
   onInput(event) {
@@ -123,6 +131,11 @@ class EventVsApp {
   }
 
   onChange(event) {
+    if (event.target.name === 'confirmation' && event.target.closest('#cancel-form')) {
+      const confirm = document.querySelector('#confirm-cancel');
+      if (confirm) confirm.disabled = !event.target.checked;
+      return;
+    }
     if (event.target.closest('#edit-form')) {
       this.updateEditPreview();
       return;
@@ -134,6 +147,11 @@ class EventVsApp {
     if (event.target.id === 'otp-form') {
       event.preventDefault();
       await this.verifyOtp(event.target);
+      return;
+    }
+    if (event.target.id === 'cancel-form') {
+      event.preventDefault();
+      await this.cancelEvent(event.target);
       return;
     }
     if (event.target.id !== 'edit-form') return;
@@ -201,6 +219,7 @@ class EventVsApp {
   }
 
   async navigate() {
+    this.stopCancellationPolling();
     const match = location.hash.match(/^#\/requests\/([^/]+)$/);
     if (match) {
       this.state.route = 'detail';
@@ -324,6 +343,102 @@ class EventVsApp {
     document.body.style.overflow = '';
     this.state.editOpen = false;
     this.state.changeSet = null;
+  }
+
+  openCancel() {
+    if (!this.state.request?.allowedActions?.includes('cancel')) return;
+    this.state.cancelOpen = true;
+    this.root.insertAdjacentHTML('beforeend', cancelDialogView(this.state.request));
+    document.body.style.overflow = 'hidden';
+    document.querySelector('#cancel-reason')?.focus();
+  }
+
+  closeCancel() {
+    document.querySelector('.confirm-backdrop')?.remove();
+    document.querySelector('.confirm-modal')?.remove();
+    document.body.style.overflow = '';
+    this.state.cancelOpen = false;
+  }
+
+  async cancelEvent(form) {
+    if (!form.elements.confirmation.checked || this.state.canceling) return;
+    const button = form.querySelector('#confirm-cancel');
+    const errorBox = form.querySelector('#cancel-error');
+    this.state.canceling = true;
+    button.disabled = true;
+    button.textContent = 'Annulation en cours…';
+    errorBox.hidden = true;
+    try {
+      const cancellation = await this.api.cancelEvent({
+        requestId: this.state.request.id,
+        expectedRevision: this.state.request.revision,
+        confirmation: true,
+        reason: form.elements.reason.value.trim(),
+      });
+      const requestId = this.state.request.id;
+      this.state.cancellation = cancellation;
+      this.closeCancel();
+      this.state.request = {
+        ...this.state.request,
+        revision: cancellation.revision || this.state.request.revision,
+        status: 'Annulation en cours',
+        currentStep: 'Suppression des données et libération des ressources',
+        allowedActions: [],
+      };
+      this.renderShell(detailView(this.state.request), 'detail');
+      this.toast('Annulation lancée. Ressources en cours de libération.', 'success');
+      await this.monitorCancellation(requestId);
+    } catch (error) {
+      this.state.canceling = false;
+      button.disabled = !form.elements.confirmation.checked;
+      button.textContent = 'Annuler et supprimer';
+      errorBox.hidden = false;
+      errorBox.textContent = error.message || 'Suppression impossible.';
+      if (error.code === 'REVISION_CONFLICT') await this.loadDetail(this.state.request.id);
+    }
+  }
+
+  async monitorCancellation(requestId) {
+    this.stopCancellationPolling();
+    const check = async () => {
+      try {
+        const result = await this.api.getCancellationStatus(requestId);
+        this.state.cancellation = result;
+        if (['Completed', 'CompletedWithWarning'].includes(result.status)) {
+          this.stopCancellationPolling();
+          this.state.canceling = false;
+          location.hash = '#/dashboard';
+          await this.loadDashboard();
+          this.toast(result.status === 'CompletedWithWarning'
+            ? 'Événement supprimé. Email de confirmation non remis.'
+            : 'Événement annulé et supprimé partout.', result.status === 'CompletedWithWarning' ? 'error' : 'success');
+          return;
+        }
+        if (result.status === 'Blocked') {
+          this.stopCancellationPolling();
+          this.state.canceling = false;
+          this.state.request = {
+            ...this.state.request,
+            status: 'Suppression bloquée',
+            currentStep: result.errors?.map(({ message }) => message).filter(Boolean).join(' · ') || 'Intervention requise',
+            allowedActions: ['cancel'],
+          };
+          this.renderShell(detailView(this.state.request), 'detail');
+          this.toast('Suppression bloquée. Aucun élément ambigu supprimé.', 'error');
+          return;
+        }
+      } catch {
+        // Job continues server-side; next status poll retries safely.
+      }
+      this.cancellationTimer = window.setTimeout(check, 3000);
+    };
+    await check();
+  }
+
+  stopCancellationPolling() {
+    if (!this.cancellationTimer) return;
+    window.clearTimeout(this.cancellationTimer);
+    this.cancellationTimer = null;
   }
 
   readEditCandidate() {

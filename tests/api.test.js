@@ -39,6 +39,21 @@ describe('EventVsApi', () => {
     expect(body).toMatchObject({ action: 'updateRequest', requestId: '42', expectedRevision: 3, changes: { title: 'B' } });
   });
 
+  it('requires explicit cancellation confirmation and polls job status', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(response({ ok: true, data: { requestId: '42', status: 'Queued' } }, 202))
+      .mockResolvedValueOnce(response({ ok: true, data: { requestId: '42', status: 'Completed' } }));
+    const api = new EventVsApi({ apiUrl: 'https://api.example.test', sessionProvider: () => 'session', fetchImpl });
+
+    await api.cancelEvent({ requestId: '42', expectedRevision: 3, confirmation: true, reason: 'Annulé' });
+    await api.getCancellationStatus('42');
+
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      action: 'cancelEvent', requestId: '42', expectedRevision: 3, confirmation: true, reason: 'Annulé', sessionToken: 'session',
+    });
+    expect(JSON.parse(fetchImpl.mock.calls[1][1].body)).toEqual({ action: 'getCancellationStatus', requestId: '42', sessionToken: 'session' });
+  });
+
   it('maps stale revision to typed 409 error', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(response({ ok: false, error: { code: 'REVISION_CONFLICT', message: 'Périmée' } }, 409));
     const api = new EventVsApi({ apiUrl: 'https://api.example.test', sessionProvider: () => 'session', fetchImpl });

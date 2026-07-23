@@ -69,7 +69,7 @@ const mainRequest = {
     { id: 'r2', resource: 'ALP 1 109', type: 'Salle', calendar: 'alp1109@epfl.ch', eventId: 'AAMk-demo-2', start: '2026-09-17T06:00:00+02:00', end: '2026-09-17T21:00:00+02:00', revision: 2, status: 'Réservé' },
     { id: 'r3', resource: 'ALP 1 94.3', type: 'Espace traiteur', calendar: 'ALP194.3@epfl.ch', eventId: 'AAMk-demo-3', start: '2026-09-17T06:00:00+02:00', end: '2026-09-17T21:00:00+02:00', revision: 2, status: 'Réservé' },
   ],
-  allowedActions: ['update'],
+  allowedActions: ['update', 'cancel'],
 };
 
 const samples = [
@@ -111,6 +111,7 @@ export const mockRequests = [
 export class MockEventVsApi {
   constructor(requests = mockRequests) {
     this.requests = structuredClone(requests);
+    this.cancellations = new Map();
   }
 
   async listRequests({ page = 1, pageSize = 12, filters = {} } = {}) {
@@ -178,6 +179,45 @@ export class MockEventVsApi {
     });
     return structuredClone(item);
   }
+
+  async cancelEvent({ requestId, expectedRevision, confirmation, reason = '' }) {
+    await pause();
+    const existing = this.cancellations.get(requestId);
+    if (existing) return structuredClone(existing);
+    const index = this.requests.findIndex(({ id }) => id === requestId);
+    const item = this.requests[index];
+    if (!item) throw typedError('Demande introuvable.', 'NOT_FOUND', 404);
+    if (!confirmation) throw typedError('Confirmation obligatoire.', 'CONFIRMATION_REQUIRED', 400);
+    if (item.revision !== expectedRevision) throw typedError('Demande modifiée par une autre personne. Recharge avant de continuer.', 'REVISION_CONFLICT', 409);
+    if (item.reservations.some(({ eventId }) => !eventId)) throw typedError('Réservation Outlook non suivie. Suppression bloquée.', 'CANCELLATION_BLOCKED', 409);
+    const result = {
+      requestId,
+      revision: item.revision + 1,
+      status: 'Completed',
+      requestedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
+      reason,
+      steps: { approvals: 'Completed', reservations: 'Completed', relatedData: 'Completed', request: 'Completed', notification: 'Completed' },
+      errors: [],
+    };
+    this.cancellations.set(requestId, result);
+    this.requests.splice(index, 1);
+    return structuredClone(result);
+  }
+
+  async getCancellationStatus(requestId) {
+    await pause();
+    const result = this.cancellations.get(requestId);
+    if (!result) throw typedError('Annulation introuvable.', 'NOT_FOUND', 404);
+    return structuredClone(result);
+  }
+}
+
+function typedError(message, code, status) {
+  const error = new Error(message);
+  error.code = code;
+  error.status = status;
+  return error;
 }
 
 function summary(item) {

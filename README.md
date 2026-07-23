@@ -40,7 +40,7 @@ Documentation Microsoft :
 
 ## Contrat API
 
-POST unique. Auth bootstrap : `startSession`, `verifySession`. Données : `listRequests`, `getRequest`, `updateRequest`. `updateRequest` applique concurrence optimiste, crée une tâche Approval distincte par équipe touchée et retourne `approvalChanges`.
+POST unique. Auth bootstrap : `startSession`, `verifySession`. Données : `listRequests`, `getRequest`, `updateRequest`, `cancelEvent`, `getCancellationStatus`. `updateRequest` applique concurrence optimiste et crée une tâche Approval distincte par équipe touchée. `cancelEvent` exige confirmation explicite, enfile suppression idempotente et libère ressources avant recyclage SharePoint.
 
 `clientContext` sert uniquement affichage. Identité pilote provient adresse email OTP vérifiée. Concurrence : `expectedRevision`; conflit HTTP 409 `REVISION_CONFLICT` avant toute annulation ou création.
 
@@ -49,6 +49,9 @@ Définitions opérationnelles générées depuis dossier parent `Eventvs` :
 - `build_approval_tasks_provisioner.py` : liste SharePoint et clé `requestId|team|revision` unique;
 - `build_team_approval.py` : un run et une Approval par tâche/équipe;
 - `build_portal_api.py` : remplacement ciblé, `CancelFlowRun`, réponse `approvalChanges`;
+- `build_cancellation_provisioner.py` / `build_delete_event.py` : tombstone, IDs Outlook exacts et worker suppression;
+- `instrument_event_flow_cancellation.py` : enregistrement runs initiaux et réservations futures;
+- `deploy_event_cancellation.py` : déploiement complet après HAR frais;
 - `verify_approval_flows.py` : validation statique avant déploiement.
 
 ## Architecture future

@@ -21,3 +21,5 @@ Rollback :
 Runs enfant déjà annulés ne sont pas restaurables. Anciennes Approvals terminées restent historiques. Anciennes Approvals groupées actives exigent annulation manuelle depuis onglet Envoyées.
 
 Frontend rollback ne modifie pas SharePoint. Flow rollback doit préserver révisions/historique déjà écrits.
+
+Suppression événement : masquer bouton puis désactiver `EventVS Delete Event`. Demande recyclée reste récupérable 30 jours. Restaurer item ne recrée pas événements Outlook ni runs annulés; utiliser sauvegarde de correspondance pour recréation contrôlée. Ne jamais supprimer réservation legacy ambiguë.

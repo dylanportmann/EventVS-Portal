@@ -72,3 +72,18 @@
 - Reprise ne restaure jamais salles/espaces traiteur.
 - Soumission échouée garde brouillon.
 - Soumission réussie efface brouillon.
+
+## Annulation et suppression
+
+- Bouton visible seulement si backend renvoie `allowedActions: ['cancel']`; Jennifer et Dylan autorisés.
+- Modal échappe titre/ID, motif facultatif, case obligatoire; double clic ne crée pas second job.
+- Révision périmée → HTTP 409 et zéro job/annulation/réservation supprimée.
+- Ressource ancienne sans ID Outlook exact → `CANCELLATION_BLOCKED`, demande intacte.
+- Plusieurs runs ouverts → tous neutralisés puis annulés; réponse tardive ignorée.
+- Trois réservations → trois IDs exacts supprimés; aucun match titre/date heuristique.
+- Échec intermédiaire → `Blocked`, reprise ne rejoue pas étapes terminées, demande non recyclée.
+- Succès → tâches, réservations, runtime links supprimés; demande dans corbeille 30 jours; tombstone minimal.
+- Email organisateur + acteur dédupliqués; échec après trois essais → `CompletedWithWarning`.
+- Cycle réel : portail → Power Automate → Approvals → Outlook → SharePoint → email → tableau de bord.
+
+Recette du 23 juillet 2026 : demandes modernes 6 et 7 supprimées avec statut `Completed`, deux liens runtime supprimés chacune, email `sent`, item absent du portail. Demande 7 appelée trois fois avec même révision : trois réponses HTTP 202 et un seul job. Demande legacy 5 : HTTP 409 `CANCELLATION_BLOCKED`, révision 4 et statut `Refusé` conservés.
