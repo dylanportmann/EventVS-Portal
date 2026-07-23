@@ -1,6 +1,6 @@
 # Contexte de reprise
 
-Dernière mise à jour : 22 juillet 2026.
+Dernière mise à jour : 23 juillet 2026.
 
 Sources portail : `/Users/dportman/Desktop/Eventvs/EventVS-Portal`.
 
@@ -16,17 +16,21 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 - licence Power Automate sans Premium;
 - flux `EventVS Portal API` créé et actif, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a`;
 - OTP autorisé pour Jennifer Brady et Dylan Portmann; session 8 h en SharePoint;
-- liste et détail SharePoint actifs; édition masquée;
+- liste, détail et édition SharePoint actifs;
+- liste `EventVS Approval Tasks` active, ID `4bcbef74-433a-4166-a02d-452c5c461994`;
+- flux enfant `EventVS Team Approval` actif, ID `a120b719-5232-4cd6-9386-94913b427b05`;
+- connexion `Power Automate Management` intégrée active et flux API remplacé;
+- formulaire public avec brouillon local/autosave et expiration 30 jours déployé;
+- recette réelle Infra validée : deux runs obsolètes annulés, nouvelle Approval approuvée, statut global `Validé`;
+- migration pilote inspectée : seule ancienne Approval groupée déjà terminée/refusée, donc aucune carte ouverte à annuler ou tâche à recréer;
 - CORS gateway `*`; quota endpoint reste exposé;
-- 29 tests frontend et build Vite passent;
+- tests portail couvrent routage, agrégation, corrélation, migration, aperçu et historique;
 
 Restes à faire :
 
-- colonnes/listes SharePoint de suivi à provisionner;
-- activer `updateRequest`, historique, Approvals obsolètes et réservation transactionnelle;
+- terminer réservation transactionnelle;
 - faire test manuel Jennifer et Dylan avec code reçu;
 - migrer vers trigger Entra protégé ou proxy Kubernetes/APIM;
-- formulaire public source modifié localement, redéploiement Power Automate requis.
 
 Mode démo local : `npm run dev`, puis `?demo=1#/dashboard`. Démo impossible hors localhost par code.
 

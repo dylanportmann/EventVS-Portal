@@ -1,4 +1,5 @@
 import { EDITABLE_FIELDS, GLOBAL_STATUSES, LOCKED_FIELDS, TEAMS } from './constants.js';
+import { APPROVED_STATUSES, currentApprovals } from './approval-model.js';
 import { displayValue, escapeHtml, formatDate, initials, slug } from './format.js';
 import { getAtPath } from './routing-rules.js';
 
@@ -150,13 +151,53 @@ function requestData(request) {
 
 function approvals(items = []) {
   if (!items.length) return fallbackHistory();
-  return `<div class="approvals">${items.map((item) => `
-    <article class="approval">
-      <span class="approval-dot ${['Approuvé', 'Approuvé reporté'].includes(item.status) ? 'ok' : ''}" aria-hidden="true">${['Approuvé', 'Approuvé reporté'].includes(item.status) ? '✓' : '•'}</span>
-      <div class="approval-copy"><strong>${escapeHtml(item.team)}</strong><span>${escapeHtml(item.assignee || 'Aucun destinataire')}${item.respondedAt ? ` · ${formatDate(item.respondedAt, true)}` : ''}</span></div>
-      <span class="status ${slug(item.status)}">${escapeHtml(item.status)}</span>
-      ${item.comment ? `<p class="approval-comment">${escapeHtml(item.comment)}</p>` : ''}
-    </article>`).join('')}</div>`;
+  const current = new Map(currentApprovals(items).map((item) => [item.team, item]));
+  const teams = [...new Set([...TEAMS, ...items.map(({ team }) => team).filter(Boolean)])];
+  return `<div class="approvals">${teams.map((team) => {
+    const active = current.get(team);
+    if (!active) return '';
+    const historyItems = items
+      .filter((item) => item.team === team && item !== active)
+      .sort((a, b) => Number(b.revision || 0) - Number(a.revision || 0));
+    return `<article class="approval-team">
+      <div class="approval-current">
+        <span class="approval-dot ${APPROVED_STATUSES.has(active.status) ? 'ok' : ''}" aria-hidden="true">${APPROVED_STATUSES.has(active.status) ? '✓' : '•'}</span>
+        <div class="approval-copy"><strong>${escapeHtml(team)}</strong><span>${escapeHtml(active.assignee || 'Aucun destinataire')} · rév. ${Number(active.revision) || '—'}</span></div>
+        <span class="status ${slug(active.status)}">${escapeHtml(active.status)}</span>
+        ${approvalMetadata(active)}
+        ${active.comment ? `<p class="approval-comment">${escapeHtml(active.comment)}</p>` : ''}
+      </div>
+      ${historyItems.length ? `<details class="approval-history"><summary>Historique (${historyItems.length})</summary>${historyItems.map(approvalHistoryItem).join('')}</details>` : ''}
+    </article>`;
+  }).join('')}</div>`;
+}
+
+function approvalMetadata(item) {
+  const delivery = deliveryLabel(item.deliveryStatus);
+  return `<div class="approval-metadata">
+    ${item.taskKey ? `<span>Clé ${escapeHtml(item.taskKey)}</span>` : ''}
+    ${item.scopeHash ? `<span>Scope ${escapeHtml(item.scopeHash)}</span>` : ''}
+    ${delivery ? `<span>Livraison ${escapeHtml(delivery)}</span>` : ''}
+    ${item.replacesTaskKey ? `<span>Remplace ${escapeHtml(item.replacesTaskKey)}</span>` : ''}
+    ${item.respondedAt ? `<span>Réponse ${formatDate(item.respondedAt, true)}</span>` : ''}
+  </div>`;
+}
+
+function approvalHistoryItem(item) {
+  return `<div class="approval-history-item"><span>Rév. ${Number(item.revision) || '—'} · ${escapeHtml(item.status || 'Inconnu')}</span>${item.taskKey ? `<code>${escapeHtml(item.taskKey)}</code>` : ''}${item.supersededBy ? `<small>Remplacée par ${escapeHtml(item.supersededBy)}</small>` : ''}${item.comment ? `<small>${escapeHtml(item.comment)}</small>` : ''}</div>`;
+}
+
+function deliveryLabel(status = '') {
+  return ({
+    queued: 'en file',
+    delivered: 'envoyée',
+    responded: 'répondue',
+    canceled: 'annulée',
+    cancel_failed: 'annulation échouée',
+    create_failed: 'création échouée',
+    obsolete: 'obsolète',
+    not_required: 'non requise',
+  })[status] || status;
 }
 
 function timeline(items = []) {
@@ -174,7 +215,8 @@ export function history(items = []) {
         before: getAtPath(item.before || {}, field),
         after,
       }));
-    return `<article class="timeline-item"><span class="timeline-dot"></span><div class="timeline-content"><strong>Révision ${item.revision} · ${escapeHtml(item.actor || 'Système')}</strong><p>${escapeHtml(item.reason || 'Sans motif.')}</p>${changes.map((change) => `<p><b>${escapeHtml(change.field)}</b> : ${escapeHtml(displayValue(change.before))} → ${escapeHtml(displayValue(change.after))}</p>`).join('')}<p>Équipes relancées : ${escapeHtml(item.reroutedTeams?.join(', ') || 'aucune')}</p><time>${formatDate(item.at, true)}</time></div></article>`;
+    const approvalChanges = item.approvalChanges || {};
+    return `<article class="timeline-item"><span class="timeline-dot"></span><div class="timeline-content"><strong>Révision ${item.revision} · ${escapeHtml(item.actor || 'Système')}</strong><p>${escapeHtml(item.reason || 'Sans motif.')}</p>${changes.map((change) => `<p><b>${escapeHtml(change.field)}</b> : ${escapeHtml(displayValue(change.before))} → ${escapeHtml(displayValue(change.after))}</p>`).join('')}<p>Approvals créées : ${escapeHtml(teamList(approvalChanges.created) || item.reroutedTeams?.join(', ') || 'aucune')}</p><p>Demandes annulées : ${escapeHtml(teamList(approvalChanges.canceled) || 'aucune')}</p><p>Validations conservées : ${escapeHtml(teamList(approvalChanges.kept) || 'aucune')}</p><time>${formatDate(item.at, true)}</time></div></article>`;
   }).join('')}</div>`;
 }
 
@@ -216,9 +258,24 @@ function formField(field, request, locked = false) {
 
 export function changePreviewView(changeSet) {
   if (!changeSet.fields.length) return '<p class="subtle">Aucun changement.</p>';
+  const approvalChanges = changeSet.approvalChanges || {
+    created: changeSet.reroutes.teams.map((team) => ({ team })),
+    canceled: [],
+    kept: [],
+  };
   return `
     ${changeSet.fields.map((field) => `<div class="change"><span class="change-label">${escapeHtml(field.label)}</span><span class="change-old">${escapeHtml(displayValue(field.before))}</span><span class="change-arrow">→</span><span class="change-new">${escapeHtml(displayValue(field.after))}</span></div>`).join('')}
-    <div class="reroute"><strong>Équipes relancées :</strong> ${escapeHtml(changeSet.reroutes.teams.join(', ') || 'aucune')}<br>${changeSet.reroutes.reasons.map(escapeHtml).join('<br>') || 'Approval existante conservée par scope hash.'}<br><strong>Validation Event initiale jamais relancée.</strong></div>`;
+    <div class="reroute">
+      <strong>Nouvelles Approvals :</strong> ${escapeHtml(teamList(approvalChanges.created) || 'aucune')}<br>
+      <strong>Demandes ouvertes annulées :</strong> ${escapeHtml(teamList(approvalChanges.canceled) || 'aucune')}<br>
+      <strong>Validations conservées :</strong> ${escapeHtml(teamList(approvalChanges.kept) || 'aucune')}<br>
+      ${changeSet.reroutes.reasons.map(escapeHtml).join('<br>') || 'Aucune équipe technique touchée.'}<br>
+      <strong>Validation Event initiale jamais relancée.</strong>
+    </div>`;
+}
+
+function teamList(items = []) {
+  return items.map((item) => typeof item === 'string' ? item : item.team).filter(Boolean).join(', ');
 }
 
 export function loadingView(label = 'Chargement…') {

@@ -102,6 +102,29 @@
         }
       }
     },
+    "approvalTask": {
+      "type": "object",
+      "required": ["team", "taskKey", "scopeHash", "revision", "deliveryStatus"],
+      "properties": {
+        "team": { "$ref": "#/$defs/team" },
+        "taskKey": { "type": "string", "pattern": "^[^|]+\\|[^|]+\\|[0-9]+$" },
+        "scopeHash": { "type": "string", "minLength": 8, "maxLength": 64 },
+        "revision": { "type": "integer", "minimum": 1 },
+        "deliveryStatus": { "enum": ["queued", "creating", "delivered", "responded", "canceled", "cancel_failed", "create_failed", "obsolete", "response_conflict", "not_required"] },
+        "replacesTaskKey": { "type": "string" },
+        "supersededBy": { "type": "string" }
+      }
+    },
+    "approvalChanges": {
+      "type": "object",
+      "required": ["created", "canceled", "kept", "errors"],
+      "properties": {
+        "created": { "type": "array", "items": { "$ref": "#/$defs/approvalTask" } },
+        "canceled": { "type": "array", "items": { "type": "object", "required": ["team", "taskKey"], "properties": { "team": { "$ref": "#/$defs/team" }, "taskKey": { "type": "string" }, "deliveryStatus": { "type": "string" } } } },
+        "kept": { "type": "array", "items": { "type": "object", "required": ["team"], "properties": { "team": { "$ref": "#/$defs/team" }, "status": { "type": "string" }, "taskKey": { "type": "string" } } } },
+        "errors": { "type": "array", "items": { "type": "object", "required": ["team", "code"], "properties": { "team": { "$ref": "#/$defs/team" }, "code": { "enum": ["cancel_failed", "create_failed", "response_conflict"] } } } }
+      }
+    },
     "sessionToken": { "type": "string", "minLength": 72, "maxLength": 72 },
     "team": { "enum": ["", "Event", "Infra", "Sécurité", "Signalétique", "IT"] },
     "globalStatus": {

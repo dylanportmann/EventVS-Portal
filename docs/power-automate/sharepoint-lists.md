@@ -19,22 +19,27 @@ Site cible : `VPO-DC-Test-Workflow-EPFLValais`. Conserver liste actuelle des dem
 
 Activer index SharePoint sur `StatutGlobal`, `DateEvent`, `DerniereActionUtc`, `RevisionEventVS`. Ne jamais filtrer plus de 5 000 lignes sans index/pagination.
 
-## EventVSApprovals
+## `EventVS Approval Tasks`
 
 | Colonne | Type |
 |---|---|
-| `Title` | `EVS-ID · équipe · rév. N` |
-| `DemandeId` | Recherche vers Demandes |
-| `Equipe` | Choix Event/Infra/Sécurité/Signalétique/IT |
-| `StatutEquipe` | Choix contrat |
-| `Destinataire` | Personne/groupe |
+| `Title` | Clé unique `requestId\|team\|revision` |
+| `RequestId` | ID demande texte |
+| `RequestItemId` | ID item Demandes numérique |
+| `Team` | Event/Infra/Sécurité/Signalétique/IT |
+| `Status` | `Queued`, `Creating`, `Pending`, `Approuvé`, `Refusé`, `Obsolete`, `ResponseConflict` |
+| `DeliveryStatus` | `queued`, `creating`, `delivered`, `responded`, `canceled`, `cancel_failed`, `obsolete`, `response_conflict` |
+| `Assignee` | Email; pilote `dylan.portmann@epfl.ch` |
 | `ApprovalId` | Texte |
+| `FlowRunId`, `ChildFlowId` | IDs internes, jamais exposés API |
 | `ScopeHash` | Texte 64 caractères |
-| `RevisionEventVS` | Nombre entier |
-| `DemandeeUtc`, `RepondueUtc` | Date/heure |
-| `Reponse`, `Commentaire` | Texte multiligne |
+| `Revision` | Nombre entier |
+| `RequestedUtc`, `RespondedUtc`, `ObsoletedUtc`, `CanceledUtc` | Date/heure |
+| `Response`, `Comment`, `Responder`, `Error` | Audit réponse/erreur |
+| `ReplacesTaskKey`, `SupersededByTaskKey` | Chaîne remplacement |
+| `PayloadJson` | Titre, motif, acteur; JSON brut |
 
-Index unique logique : `DemandeId + Equipe + RevisionEventVS`. Une réponse compte seulement si `StatutEquipe = En attente`, révision courante égale et `ScopeHash` courant égal.
+`Title` indexé avec `EnforceUniqueValues=true`. Une réponse compte seulement si cinq corrélations `requestId + team + revision + taskKey + scopeHash` correspondent et tâche reste `Pending`.
 
 ## EventVSHistory
 

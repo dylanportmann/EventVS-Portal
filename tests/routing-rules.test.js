@@ -36,14 +36,14 @@ describe('routing rules', () => {
     expect(computeReroutes(request(), [{ path, value }]).teams).toEqual(expected);
   });
 
-  it('reroutes all currently required technical teams on schedule change', () => {
+  it('reroutes all technical teams on schedule change', () => {
     expect(computeReroutes(request(), [{ path: 'dateStart', value: '2026-09-02' }]).teams)
-      .toEqual(['Infra', 'Sécurité', 'IT']);
+      .toEqual(['Infra', 'Sécurité', 'Signalétique', 'IT']);
   });
 
-  it('reroutes all currently required teams on remarks', () => {
+  it('reroutes all technical teams on remarks', () => {
     expect(computeReroutes(request(), [{ path: 'fields.remarks', value: 'Nouveau risque' }]).teams)
-      .toEqual(['Infra', 'Sécurité', 'IT']);
+      .toEqual(['Infra', 'Sécurité', 'Signalétique', 'IT']);
   });
 
   it('reroutes signage for title only when screens are active', () => {
@@ -58,7 +58,7 @@ describe('routing rules', () => {
       { path: 'fields.rooms', value: 'B' },
       { path: 'fields.itNeeds', value: 'Micros' },
     ]);
-    expect(result.teams).toEqual(['Infra', 'Sécurité', 'IT']);
+    expect(result.teams).toEqual(['Infra', 'Sécurité', 'Signalétique', 'IT']);
     expect(result.teams).not.toContain('Event');
   });
 
@@ -70,6 +70,7 @@ describe('routing rules', () => {
     const result = buildChangeSet(before, after);
     expect(result.changes).toEqual({ title: 'Nouveau titre', 'fields.participants': 95 });
     expect(result.fields.find(({ path }) => path === 'fields.participants')).toMatchObject({ before: 80, after: 95 });
+    expect(result.approvalChanges.created.map(({ team }) => team)).toEqual(['Sécurité']);
   });
 
   it('generates deterministic scope hash', () => {

@@ -362,8 +362,10 @@ class EventVsApp {
       this.closeEdit();
       this.state.request = updated;
       this.renderShell(detailView(updated), 'detail');
-      const teams = changeSet.reroutes.teams.join(', ') || 'aucune équipe';
-      this.toast(`Modification enregistrée. Équipes relancées : ${teams}.`, 'success');
+      const approvalChanges = updated.approvalChanges || changeSet.approvalChanges;
+      const created = approvalChanges?.created?.map(({ team }) => team).join(', ') || 'aucune';
+      const canceled = approvalChanges?.canceled?.map(({ team }) => team).join(', ') || 'aucune';
+      this.toast(`Modification enregistrée. Approvals créées : ${created}. Annulées : ${canceled}.`, 'success');
     } catch (error) {
       button.disabled = false;
       button.textContent = 'Confirmer modification';

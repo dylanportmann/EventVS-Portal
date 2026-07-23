@@ -1,4 +1,5 @@
 import { EDITABLE_FIELDS } from './constants.js';
+import { previewApprovalChanges } from './approval-model.js';
 
 const ALL_TECHNICAL = ['Infra', 'Sécurité', 'Signalétique', 'IT'];
 const SCHEDULE = new Set(['dateStart', 'dateEnd', 'startTime', 'endTime']);
@@ -39,13 +40,12 @@ export function requiredTechnicalTeams(request) {
 
 export function computeReroutes(request, changed) {
   const paths = new Set(changed.map((field) => typeof field === 'string' ? field : field.path));
-  const required = new Set(requiredTechnicalTeams(request));
   const teams = new Set();
   const reasons = [];
 
   if ([...paths].some((path) => SCHEDULE.has(path))) {
-    required.forEach((team) => teams.add(team));
-    reasons.push('Date ou horaire modifiée : toutes équipes techniques requises');
+    ALL_TECHNICAL.forEach((team) => teams.add(team));
+    reasons.push('Date ou horaire modifiée : toutes équipes techniques');
   }
   if ([...paths].some((path) => INFRA.has(path))) {
     teams.add('Infra');
@@ -68,8 +68,8 @@ export function computeReroutes(request, changed) {
     reasons.push('Besoins audiovisuels / IT modifiés');
   }
   if (paths.has('fields.remarks')) {
-    required.forEach((team) => teams.add(team));
-    reasons.push('Remarques libres modifiées : toutes équipes requises');
+    ALL_TECHNICAL.forEach((team) => teams.add(team));
+    reasons.push('Remarques libres modifiées : toutes équipes techniques');
   }
 
   return { teams: [...teams], reasons };
@@ -88,8 +88,9 @@ export function buildChangeSet(request, candidate) {
     value: getAtPath(candidate, field.path),
   }));
   const reroutes = computeReroutes(request, fields);
+  const approvalChanges = previewApprovalChanges(request, candidate, reroutes.teams);
   const changes = Object.fromEntries(fields.map(({ path, after }) => [path, after]));
-  return { fields, changes, reroutes };
+  return { fields, changes, reroutes, approvalChanges };
 }
 
 export function scopeHash(fields, team) {

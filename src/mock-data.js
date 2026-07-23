@@ -1,9 +1,12 @@
+import { aggregateApprovalStatus, currentApprovals, isOpenApproval, replaceApprovalsForRevision } from './approval-model.js';
+import { computeReroutes } from './routing-rules.js';
+
 const baseApprovals = [
-  { team: 'Event', status: 'Approuvé', assignee: 'Jennifer Brady', revision: 1, requestedAt: '2026-07-08T08:18:00Z', respondedAt: '2026-07-08T09:02:00Z', response: 'Approve', comment: 'Demande complète.' },
-  { team: 'Infra', status: 'En attente', assignee: 'Équipe Infrastructure VS', revision: 2, requestedAt: '2026-07-10T12:44:00Z', scopeHash: 'a42e1c90' },
-  { team: 'Sécurité', status: 'Approuvé reporté', assignee: 'Sécurité EPFL VS', revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-09T07:31:00Z', response: 'Approve', comment: 'Accès externe validé.', scopeHash: 'c18f2a77' },
-  { team: 'Signalétique', status: 'Non requis', assignee: '', revision: 1 },
-  { team: 'IT', status: 'Approuvé', assignee: 'Support IT Valais', revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-08T14:18:00Z', response: 'Approve', comment: 'Visioconférence confirmée.', scopeHash: 'fb4a8801' },
+  { team: 'Event', current: true, taskKey: 'EVS-2026-0042|Event|1', status: 'Approuvé', deliveryStatus: 'responded', assignee: 'Jennifer Brady', revision: 1, requestedAt: '2026-07-08T08:18:00Z', respondedAt: '2026-07-08T09:02:00Z', response: 'Approve', comment: 'Demande complète.' },
+  { team: 'Infra', current: true, taskKey: 'EVS-2026-0042|Infra|2', status: 'En attente', deliveryStatus: 'delivered', assignee: 'dylan.portmann@epfl.ch', revision: 2, requestedAt: '2026-07-10T12:44:00Z', scopeHash: 'a42e1c90f215884e' },
+  { team: 'Sécurité', current: true, taskKey: 'EVS-2026-0042|Sécurité|1', status: 'Approuvé reporté', deliveryStatus: 'responded', assignee: 'dylan.portmann@epfl.ch', revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-09T07:31:00Z', response: 'Approve', comment: 'Accès externe validé.', scopeHash: 'c18f2a7700ab3c71' },
+  { team: 'Signalétique', current: true, taskKey: 'EVS-2026-0042|Signalétique|1', status: 'Non requis', deliveryStatus: 'not_required', assignee: '', revision: 1 },
+  { team: 'IT', current: true, taskKey: 'EVS-2026-0042|IT|1', status: 'Approuvé', deliveryStatus: 'responded', assignee: 'dylan.portmann@epfl.ch', revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-08T14:18:00Z', response: 'Approve', comment: 'Visioconférence confirmée.', scopeHash: 'fb4a880140a3f961' },
 ];
 
 const mainRequest = {
@@ -154,16 +157,23 @@ export class MockEventVsApi {
     }
     const before = structuredClone(item);
     Object.entries(changes).forEach(([path, value]) => setAtPath(item, path, value));
+    const reroutes = computeReroutes(before, Object.entries(changes).map(([path, value]) => ({ path, value })));
     item.revision += 1;
     item.updatedAt = new Date().toISOString();
-    item.status = 'Modification en cours';
+    const replacement = replaceApprovalsForRevision(before, item, reroutes.teams, item.updatedAt);
+    item.approvals = replacement.approvals;
+    item.approvalChanges = replacement.approvalChanges;
+    item.status = aggregateApprovalStatus(item.approvals);
+    item.currentStep = reroutes.teams.length ? 'Revalidation technique en cours' : 'Modification enregistrée';
+    item.waitingFor = currentApprovals(item.approvals).filter(isOpenApproval).map(({ team }) => team);
     item.history.unshift({
       id: `h${item.history.length + 1}`,
       revision: item.revision,
       at: item.updatedAt,
       actor: identity.name || 'Gestionnaire Event VS',
       reason,
-      reroutedTeams: [],
+      reroutedTeams: reroutes.teams,
+      approvalChanges: replacement.approvalChanges,
       changes: Object.keys(changes).map((path) => ({ field: path, before: getAtPath(before, path), after: getAtPath(item, path) })),
     });
     return structuredClone(item);

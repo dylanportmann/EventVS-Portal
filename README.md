@@ -4,7 +4,7 @@ SPA HTML/CSS/JavaScript pour suivi des demandes d'événements EPFL Valais Walli
 
 ## État
 
-Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate et lecture SharePoint liste/détail. Modification et suivi fin historique/Approvals restent désactivés tant que listes de suivi ne sont pas provisionnées.
+Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate, lecture/édition SharePoint et orchestration Approval séparée par équipe. Remplacement ciblé et `CancelFlowRun` validés sur cycle réel.
 
 ## Développement
 
@@ -40,9 +40,16 @@ Documentation Microsoft :
 
 ## Contrat API
 
-POST unique. Auth bootstrap : `startSession`, `verifySession`. Données : `listRequests`, `getRequest`, `updateRequest`. `updateRequest` retourne actuellement `UPDATE_NOT_READY` et interface masque édition.
+POST unique. Auth bootstrap : `startSession`, `verifySession`. Données : `listRequests`, `getRequest`, `updateRequest`. `updateRequest` applique concurrence optimiste, crée une tâche Approval distincte par équipe touchée et retourne `approvalChanges`.
 
-`clientContext` sert uniquement affichage. Identité pilote provient adresse email OTP vérifiée. Future concurrence : `expectedRevision`; conflit HTTP 409 `REVISION_CONFLICT`.
+`clientContext` sert uniquement affichage. Identité pilote provient adresse email OTP vérifiée. Concurrence : `expectedRevision`; conflit HTTP 409 `REVISION_CONFLICT` avant toute annulation ou création.
+
+Définitions opérationnelles générées depuis dossier parent `Eventvs` :
+
+- `build_approval_tasks_provisioner.py` : liste SharePoint et clé `requestId|team|revision` unique;
+- `build_team_approval.py` : un run et une Approval par tâche/équipe;
+- `build_portal_api.py` : remplacement ciblé, `CancelFlowRun`, réponse `approvalChanges`;
+- `verify_approval_flows.py` : validation statique avant déploiement.
 
 ## Architecture future
 

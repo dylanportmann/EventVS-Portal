@@ -13,7 +13,7 @@ Flux séparé `EventVS Portal API`, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a` :
 5. `listRequests`/`getRequest` vérifient session avant lecture liste métier.
 6. Requêtes navigateur utilisent `text/plain` pour éviter preflight Authorization; aucun cookie.
 7. Entrées sensibles du trigger/actions marquées Secure Inputs.
-8. `updateRequest` désactivé (`501 UPDATE_NOT_READY`) jusqu'au suivi historique/révisions.
+8. `updateRequest` actif avec `expectedRevision`, lock ETag et tâches Approval séparées.
 
 Licence constatée : `Flow for Office 365`, `accessPremiumApis=false`. Action HTTP Premium ne peut donc pas appeler Graph `/me` pour valider jeton utilisateur. Test consentement Flow renvoie `AADSTS65001`.
 
@@ -77,44 +77,77 @@ Lire demande + quatre listes liées en parallèle. Retourner :
 
 Demande importée sans traces : `EtapeActuelle = Historique non disponible`, tableaux vides. Ne pas inventer approvers/dates.
 
-## `updateRequest`
+## `updateRequest` et flux enfant
+
+Trois composants :
+
+1. `EventVS Portal API` modifie demande et enfile tâches.
+2. Liste `EventVS Approval Tasks` porte état/audit de chaque équipe.
+3. `EventVS Team Approval`, déclenché sur création item, crée exactement une Approval puis attend réponse dans run isolé.
 
 Ordre transactionnel :
 
-1. Charger demande et vérifier `RevisionEventVS == expectedRevision`; sinon HTTP 409 avant toute écriture.
+1. Charger demande et vérifier révision; sinon HTTP 409 avant toute écriture.
 2. Refuser toute clé hors allowlist. Refuser champs organisateur initiaux/courants.
 3. Calculer objet avant/après, champs modifiés, équipes touchées et scope hashes.
 4. Si ressources/créneau changent : vérifier nouvelles ressources, créer nouvelles réservations provisoires. Échec → supprimer provisoires créées pendant tentative, répondre 409 `RESOURCE_UNAVAILABLE`; garder anciennes réservations.
 5. Écrire historique complet révision N→N+1.
-6. Mettre à jour demande et `RevisionEventVS = N+1`.
-7. Marquer approvals touchées `Obsolète`; garder autres `En attente`, `Approuvé` ou convertir `Approuvé reporté` selon logique métier.
-8. Envoyer email ancien approver : carte rév. N ne doit plus être traitée.
-9. Créer nouvelles Approvals avec `ScopeHash`, révision N+1 et destinataire.
+6. Écrire demande avec ETag et révision N+1. Échec ETag → HTTP 409; aucune tâche touchée.
+7. Pour chaque équipe touchée, marquer ancienne tâche ouverte `Obsolete`; validation terminée reste historique inchangé.
+8. Tenter `CancelFlowRun` sur run enfant. Échec → `cancel_failed`, email obsolescence; garde réponse neutralise ancienne carte.
+9. Créer item `Queued` unique `requestId|team|revision`; trigger enfant crée nouvelle Approval assignée à `dylan.portmann@epfl.ch`.
 10. Confirmer nouvelles réservations, puis supprimer/annuler anciennes et marquer `Remplacé`.
 11. Envoyer email demandeur immédiat : différences + équipes relancées.
-12. Répondre détail actualisé.
+12. Répondre détail actualisé avec `approvalChanges.created`, `canceled`, `kept`, `errors`. API ne bloque jamais en attente réponse Approval.
 
 Validation Event initiale ne repart jamais après modification. `title` relance Signalétique uniquement si écrans actifs. `remarks` relance toutes équipes techniques actuellement requises.
 
 ## Garde réponse Approval
 
-Avant application réponse :
+Flux enfant stocke `ApprovalId`, `FlowRunId`, `ChildFlowId`, `taskKey`, révision et scope. Avant application réponse :
 
 ```text
-approval.StatutEquipe == "En attente"
-AND approval.RevisionEventVS == demande.RevisionEventVS
-AND approval.ScopeHash == hashScopeCourant(demande, approval.Equipe)
+task.Status == "Pending"
+AND task.requestId == demande.Id
+AND task.team == validation.team
+AND task.revision == demande.revision
+AND task.taskKey == demande.approvalState[team].taskKey
+AND task.scopeHash == demande.approvalState[team].scopeHash
 ```
 
-Sinon : journaliser `Réponse tardive ignorée`, conserver demande, terminer branche. Ancienne carte Microsoft Approvals peut rester visible.
+Sinon : tâche `Obsolete`, journal `Réponse tardive ignorée`, demande inchangée. Mise à jour demande utilise ETag et maximum trois essais; conflit final devient `response_conflict` pour traitement manuel.
 
 ## Résultat final
 
 Après chaque réponse valide, recalculer :
 
-- tout requis approuvé/reporté → `Validé`, email final demandeur;
-- au moins un requis refusé → `Refusé`, email final demandeur;
-- sinon → `Étude technique`, `PersonnesEnAttente` mis à jour.
+- au moins une équipe actuelle refusée → `Refusé`;
+- au moins une équipe actuelle en attente → `Modification en cours`;
+- toutes équipes actuelles requises approuvées/reportées → `Validé`.
+
+Validation Event initiale reste dans `approvalState.Event`; révision technique ne la recrée jamais.
+
+## Génération et préflight
+
+```bash
+python3 build_approval_tasks_provisioner.py
+python3 build_team_approval.py --task-list-id <GUID_LISTE>
+EVENTVS_TEAM_APPROVAL_FLOW_ID=<GUID_FLUX> \
+EVENTVS_FLOW_MANAGEMENT_CONNECTION=<CONNEXION> \
+  python3 build_portal_api.py
+python3 verify_approval_flows.py --deployment
+```
+
+`Power Automate Management` est connecteur Standard. `CancelFlowRun` prend environnement, flow ID et run ID. Annulation reste best-effort; corrélation SharePoint reste garantie autoritative.
+
+Déploiement intégré auto-détecte unique connexion `Power Automate Management` connectée avant toute mutation :
+
+```bash
+python3 ../deploy_approval_revision.py --har <HAR_FRAIS>
+python3 ../deploy_approval_revision.py --har <HAR_FRAIS> --apply
+```
+
+Si plusieurs connexions existent, préciser `--flow-management-connection <NOM>`.
 
 ## Backfill
 

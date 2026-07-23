@@ -35,6 +35,15 @@
 - Approval touchée devient `Obsolète`; nouvelle rév./scope créés.
 - Réponse ancienne Approval ignorée.
 - Deux navigateurs même révision : premier 200, second 409 puis rechargement.
+- Infra seule : ancienne Infra ouverte annulée/neutralisée, nouvelle Infra créée, autres inchangées.
+- Date ou remarques : quatre tâches, quatre Approval IDs, quatre runs.
+- Deux équipes touchées : deux `taskKey`, Approval IDs et runs distincts.
+- Révision rapide : ancien run annulé ou réponse neutralisée par cinq clés.
+- `CancelFlowRun` échoue : `cancel_failed`, email obsolescence, nouvelle tâche active.
+- Réponses équipes simultanées : relecture ETag, trois essais, aucune équipe écrasée.
+- Un refus actuel : global `Refusé`; toutes réponses positives : `Validé`.
+- Conflit révision HTTP 409 : zéro annulation et zéro tâche créée.
+- Validation Event historique jamais recréée.
 
 ## Réservations
 
@@ -50,9 +59,15 @@
 - Ancien approver averti carte obsolète.
 - Historique contient acteur `oid`, dates UTC, avant/après, motif, statut, équipes.
 
+## Générateurs/migration
+
+- `python3 verify_approval_flows.py` : parent sans Approval groupée, quatre routes tâches, enfant une Approval/run, retries ETag = 3.
+- `npm run migration:plan -- export.json` : IDs groupés à annuler manuellement, tâches séparées à recréer, validations conservées.
+- Cycle réel pilote : Outlook → Approval → liste tâches → demande → portail sous 15 secondes.
+
 ## Brouillon formulaire public
 
-- Autosave même navigateur/appareil.
+- Autosave même navigateur/appareil, expiration et suppression après 30 jours.
 - Boutons Enregistrer/Reprendre/Supprimer.
 - Reprise ne restaure jamais salles/espaces traiteur.
 - Soumission échouée garde brouillon.

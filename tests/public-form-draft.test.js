@@ -67,9 +67,26 @@ describe.skipIf(!workspaceFilesAvailable)('workspace public form draft', () => {
     expect(document.querySelector('#draftStatus').textContent).toContain('brouillon local supprimé');
   });
 
+  it('deletes drafts older than 30 days when resumed', () => {
+    const { window, document } = loadForm();
+    window.localStorage.setItem('eventvs.public-request-draft.v1', JSON.stringify({
+      version: 1,
+      savedAt: '2020-01-01T00:00:00.000Z',
+      data: { titre: 'Ancien événement' },
+      resourcesRequireRefresh: true,
+    }));
+    document.querySelector('#btnDraftResume').disabled = false;
+    document.querySelector('#btnDraftResume').click();
+
+    expect(window.localStorage.getItem('eventvs.public-request-draft.v1')).toBeNull();
+    expect(document.querySelector('#btnDraftResume').disabled).toBe(true);
+    expect(document.querySelector('#draftStatus').textContent).toContain('expiré après 30 jours');
+  });
+
   it('embeds same draft implementation in generated Power Automate definition', () => {
     const flow = fs.readFileSync(flowPath, 'utf8');
     expect(flow).toContain('eventvs.public-request-draft.v1');
+    expect(flow).toContain('DRAFT_MAX_AGE_MS');
     expect(flow).toContain('Salles et espaces traiteur non restaur');
   });
 });

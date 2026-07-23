@@ -157,14 +157,20 @@ h1, h2, h3 { font-family: 'Segoe UI', system-ui, sans-serif; }
 .locked::after { content: ' verrouillé'; color: var(--muted); font-size: 10px; font-weight: 500; text-transform: lowercase; }
 
 .approvals { display: grid; gap: 0; }
-.approval { display: grid; grid-template-columns: 24px 1fr auto; gap: 11px; padding: 14px 0; border-top: 1px solid var(--line); }
-.approval:first-child { border-top: 0; padding-top: 0; }
-.approval:last-child { padding-bottom: 0; }
+.approval-team { padding: 14px 0; border-top: 1px solid var(--line); }
+.approval-team:first-child { border-top: 0; padding-top: 0; }
+.approval-team:last-child { padding-bottom: 0; }
+.approval-current { display: grid; grid-template-columns: 24px 1fr auto; gap: 11px; }
 .approval-dot { display: grid; place-content: center; width: 24px; height: 24px; border-radius: 50%; background: #e9ebef; color: #6a717d; font-size: 11px; font-weight: 800; }
 .approval-dot.ok { background: var(--green-soft); color: var(--green); }
 .approval-copy strong { display: block; font-size: 13px; }
 .approval-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.approval-metadata { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 5px 10px; color: var(--muted); font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
 .approval-comment { grid-column: 2 / -1; margin: -3px 0 0; padding: 9px 11px; border-left: 2px solid #d8dbe0; color: #555d69; font-size: 12px; line-height: 1.5; }
+.approval-history { margin: 10px 0 0 35px; color: var(--muted); font-size: 11px; }
+.approval-history summary { cursor: pointer; font-weight: 700; }
+.approval-history-item { display: grid; gap: 3px; margin-top: 8px; padding: 8px 10px; border-radius: 7px; background: #f5f6f7; overflow-wrap: anywhere; }
+.approval-history-item code { font-size: 10px; }
 
 .timeline { position: relative; display: grid; gap: 0; }
 .timeline-item { position: relative; display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding-bottom: 20px; }

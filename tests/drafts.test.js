@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { deleteDraft, DRAFT_KEY, loadDraft, sanitizeDraft, saveDraft } from '../src/drafts.js';
+import {
+  deleteDraft,
+  DRAFT_KEY,
+  DRAFT_MAX_AGE_MS,
+  loadDraft,
+  sanitizeDraft,
+  saveDraft,
+} from '../src/drafts.js';
 
 describe('local request drafts', () => {
   let storage;
@@ -31,6 +38,17 @@ describe('local request drafts', () => {
     deleteDraft(storage);
     expect(storage.getItem(DRAFT_KEY)).toBeNull();
     expect(loadDraft(storage)).toBeNull();
+  });
+
+  it('keeps drafts younger than 30 days and deletes expired drafts', () => {
+    const savedAt = new Date('2026-07-01T10:00:00Z');
+    saveDraft({ title: 'Forum' }, storage, savedAt);
+
+    expect(loadDraft(storage, new Date(savedAt.getTime() + DRAFT_MAX_AGE_MS - 1))).toMatchObject({
+      data: { title: 'Forum' },
+    });
+    expect(loadDraft(storage, new Date(savedAt.getTime() + DRAFT_MAX_AGE_MS))).toBeNull();
+    expect(storage.getItem(DRAFT_KEY)).toBeNull();
   });
 
   it('ignores corrupt or incompatible drafts', () => {

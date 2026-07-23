@@ -1,4 +1,5 @@
 export const DRAFT_KEY = 'eventvs.public-request-draft.v1';
+export const DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 const RESOURCE_KEYS = new Set([
   'rooms',
@@ -30,12 +31,17 @@ export function saveDraft(formData, storage = localStorage, now = new Date()) {
   return draft;
 }
 
-export function loadDraft(storage = localStorage) {
+export function loadDraft(storage = localStorage, now = new Date()) {
   const raw = storage.getItem(DRAFT_KEY);
   if (!raw) return null;
   try {
     const draft = JSON.parse(raw);
     if (draft.version !== 1 || !draft.data || typeof draft.data !== 'object') return null;
+    const savedAt = Date.parse(draft.savedAt);
+    if (!Number.isFinite(savedAt) || now.getTime() - savedAt >= DRAFT_MAX_AGE_MS) {
+      storage.removeItem(DRAFT_KEY);
+      return null;
+    }
     return { ...draft, data: sanitizeDraft(draft.data), resourcesRequireRefresh: true };
   } catch {
     return null;
