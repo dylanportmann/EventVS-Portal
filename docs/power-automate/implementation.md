@@ -15,6 +15,8 @@ Flux séparé `EventVS Portal API`, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a` :
 7. Entrées sensibles du trigger/actions marquées Secure Inputs.
 8. `updateRequest` actif avec `expectedRevision`, lock ETag et tâches Approval séparées.
 
+Accès portail reste limité à Jennifer Brady et Dylan Portmann. Destinataires Approvals n’obtiennent aucun accès portail.
+
 Licence constatée : `Flow for Office 365`, `accessPremiumApis=false`. Action HTTP Premium ne peut donc pas appeler Graph `/me` pour valider jeton utilisateur. Test consentement Flow renvoie `AADSTS65001`.
 
 Risque résiduel : gateway renvoie `Access-Control-Allow-Origin: *`; OTP/session protège données, mais quota trigger reste exposé. Architecture cible ci-dessous reste recommandée.
@@ -88,6 +90,18 @@ Cinq composants :
 4. `EventVS Approval Summary Sync`, déclenché sur modification tâche, relit toutes tâches et écrit résumé demande avec trois lectures/écritures ETag séquentielles.
 5. `EventVS Approval Response Watcher` attend, par Approval ID existant, réponses des demandes historiques démarrées avant instrumentation. Il ne crée aucune Approval.
 
+Mapping partagé validé par [`approval-recipients.json`](../../src/approval-recipients.json) :
+
+| Équipe | Destinataires Approval |
+|---|---|
+| Event | `jennifer.brady@epfl.ch` |
+| Infra | `lou.mahieu@epfl.ch;oscar.teti@epfl.ch` |
+| Sécurité | `julien.howald@epfl.ch` |
+| Signalétique | `jennifer.brady@epfl.ch` |
+| IT | `dylan.portmann@epfl.ch;jean.perruchoud@epfl.ch;cedric.passerini@epfl.ch` |
+
+Mapping exige cinq équipes complètes, listes non vides, adresses `@epfl.ch` et aucun doublon interne. Ordre reste stable. Infra/IT utilisent `approvalType=Basic` : première approbation ou premier refus termine carte équipe.
+
 Ordre transactionnel :
 
 1. Charger demande et vérifier révision; sinon HTTP 409 avant toute écriture.
@@ -98,12 +112,14 @@ Ordre transactionnel :
 6. Écrire demande avec ETag et révision N+1. Échec ETag → HTTP 409; aucune tâche touchée.
 7. Pour chaque équipe touchée, marquer ancienne tâche ouverte `Obsolete`; validation terminée reste historique inchangé.
 8. Tenter `CancelFlowRun` sur run enfant. Échec → `cancel_failed`, email obsolescence; garde réponse neutralise ancienne carte.
-9. Créer item `Queued` unique `requestId|team|revision`; trigger enfant crée nouvelle Approval assignée à `dylan.portmann@epfl.ch`.
+9. Créer item `Queued` unique `requestId|team|revision`, avec `Assignee` exact du mapping; trigger enfant crée nouvelle Approval depuis `Assignee`, sans destinataire codé en dur.
 10. Confirmer nouvelles réservations, puis supprimer/annuler anciennes et marquer `Remplacé`.
 11. Envoyer email demandeur immédiat : différences + équipes relancées.
 12. Répondre détail actualisé avec `approvalChanges.created`, `canceled`, `kept`, `errors`. API ne bloque jamais en attente réponse Approval.
 
 Validation Event initiale ne repart jamais après modification. `title` relance Signalétique uniquement si écrans actifs. `remarks` relance toutes équipes techniques actuellement requises.
+
+Patch définition initiale affecte seulement nouveaux runs. Approvals déjà ouvertes gardent destinataires, Approval ID et run existants; aucune annulation/recréation pour migration routage.
 
 ## Garde réponse Approval
 
@@ -120,7 +136,7 @@ AND task.scopeHash == demande.approvalState[team].scopeHash
 
 Sinon : tâche `Obsolete`, journal `Réponse tardive ignorée`, demande inchangée. Tâches restent source autoritative; synchronisation agrège depuis relecture complète. Chaque conflit ETag déclenche nouvelle relecture, maximum trois tentatives.
 
-Flux natifs portent `WatcherStatus=Native`. Backfill ouvert porte `Queued`; watcher réclame tâche avec ETag, vérifie `approvalState[team].taskKey`, attend réponse officielle, puis écrit réponse avec trois tentatives. Révision non courante reste inchangée.
+Flux natifs portent `WatcherStatus=Native`. Backfill ouvert porte `Queued`; watcher réclame tâche avec ETag, vérifie `approvalState[team].taskKey`, attend réponse officielle, puis écrit réponse avec trois tentatives. Backfill lit `assignedTo` réel depuis historique action; il ne remplace jamais destinataire historique par mapping courant. Révision non courante reste inchangée.
 
 ## Résultat final
 

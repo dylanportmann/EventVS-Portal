@@ -1,12 +1,13 @@
 import { aggregateApprovalStatus, currentApprovals, isOpenApproval, replaceApprovalsForRevision } from './approval-model.js';
 import { computeReroutes } from './routing-rules.js';
+import { approvalAssignee } from './approval-recipients.js';
 
 const baseApprovals = [
-  { team: 'Event', current: true, taskKey: 'EVS-2026-0042|Event|1', status: 'Approuvé', deliveryStatus: 'responded', assignee: 'Jennifer Brady', revision: 1, requestedAt: '2026-07-08T08:18:00Z', respondedAt: '2026-07-08T09:02:00Z', response: 'Approve', comment: 'Demande complète.' },
-  { team: 'Infra', current: true, taskKey: 'EVS-2026-0042|Infra|2', status: 'En attente', deliveryStatus: 'delivered', assignee: 'dylan.portmann@epfl.ch', revision: 2, requestedAt: '2026-07-10T12:44:00Z', scopeHash: 'a42e1c90f215884e' },
-  { team: 'Sécurité', current: true, taskKey: 'EVS-2026-0042|Sécurité|1', status: 'Approuvé reporté', deliveryStatus: 'responded', assignee: 'dylan.portmann@epfl.ch', revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-09T07:31:00Z', response: 'Approve', comment: 'Accès externe validé.', scopeHash: 'c18f2a7700ab3c71' },
+  { team: 'Event', current: true, taskKey: 'EVS-2026-0042|Event|1', status: 'Approuvé', deliveryStatus: 'responded', assignee: approvalAssignee('Event'), revision: 1, requestedAt: '2026-07-08T08:18:00Z', respondedAt: '2026-07-08T09:02:00Z', response: 'Approve', comment: 'Demande complète.' },
+  { team: 'Infra', current: true, taskKey: 'EVS-2026-0042|Infra|2', status: 'En attente', deliveryStatus: 'delivered', assignee: approvalAssignee('Infra'), revision: 2, requestedAt: '2026-07-10T12:44:00Z', scopeHash: 'a42e1c90f215884e' },
+  { team: 'Sécurité', current: true, taskKey: 'EVS-2026-0042|Sécurité|1', status: 'Approuvé reporté', deliveryStatus: 'responded', assignee: approvalAssignee('Sécurité'), revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-09T07:31:00Z', response: 'Approve', comment: 'Accès externe validé.', scopeHash: 'c18f2a7700ab3c71' },
   { team: 'Signalétique', current: true, taskKey: 'EVS-2026-0042|Signalétique|1', status: 'Non requis', deliveryStatus: 'not_required', assignee: '', revision: 1 },
-  { team: 'IT', current: true, taskKey: 'EVS-2026-0042|IT|1', status: 'Approuvé', deliveryStatus: 'responded', assignee: 'dylan.portmann@epfl.ch', revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-08T14:18:00Z', response: 'Approve', comment: 'Visioconférence confirmée.', scopeHash: 'fb4a880140a3f961' },
+  { team: 'IT', current: true, taskKey: 'EVS-2026-0042|IT|1', status: 'Approuvé', deliveryStatus: 'responded', assignee: approvalAssignee('IT'), revision: 1, requestedAt: '2026-07-08T09:05:00Z', respondedAt: '2026-07-08T14:18:00Z', response: 'Approve', comment: 'Visioconférence confirmée.', scopeHash: 'fb4a880140a3f961' },
 ];
 
 const mainRequest = {

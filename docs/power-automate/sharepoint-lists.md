@@ -30,7 +30,7 @@ Activer index SharePoint sur `StatutGlobal`, `DateEvent`, `DerniereActionUtc`, `
 | `Origin` | `Initial` ou `Revision`; flux enfant traite seulement `Revision` |
 | `Status` | `Queued`, `Creating`, `Pending`, `Approuvé`, `Refusé`, `Obsolete`, `ResponseConflict` |
 | `DeliveryStatus` | `queued`, `creating`, `delivered`, `responded`, `canceled`, `cancel_failed`, `obsolete`, `response_conflict` |
-| `Assignee` | Email; pilote `dylan.portmann@epfl.ch` |
+| `Assignee` | Liste exacte destinataires utilisée, emails séparés par `;`; immuable dans historique |
 | `ApprovalId` | Texte |
 | `FlowRunId`, `ChildFlowId` | IDs internes, jamais exposés API |
 | `ScopeHash` | Texte 64 caractères |
@@ -45,6 +45,8 @@ Activer index SharePoint sur `StatutGlobal`, `DateEvent`, `DerniereActionUtc`, `
 | `PayloadJson` | Titre, motif, acteur; JSON brut |
 
 `Title` indexé avec `EnforceUniqueValues=true`; `RequestId` indexé pour lectures portail/synchronisation. Une réponse compte seulement si cinq corrélations `requestId + team + revision + taskKey + scopeHash` correspondent et tâche reste `Pending`. Watcher historique vérifie aussi clé courante stockée dans résumé demande.
+
+Mapping équipe → destinataires vient de [`approval-recipients.json`](../../src/approval-recipients.json). `approvalType=Basic` donne sémantique première réponse pour groupes Infra/IT. API conserve séparateur `;`; interface affiche adresses avec virgules.
 
 ## EventVSHistory
 

@@ -1,5 +1,6 @@
 import { EDITABLE_FIELDS, GLOBAL_STATUSES, LOCKED_FIELDS, TEAMS } from './constants.js';
 import { APPROVED_STATUSES, currentApprovals } from './approval-model.js';
+import { formatApprovalRecipients } from './approval-recipients.js';
 import { displayValue, escapeHtml, formatDate, initials, slug } from './format.js';
 import { getAtPath } from './routing-rules.js';
 
@@ -219,18 +220,20 @@ function approvalMetadata(item) {
 }
 
 function recipientLabel(item) {
+  const recipients = formatApprovalRecipients(item.assignee);
   if (item.status === 'Non requis') return 'Aucun envoi requis';
-  if (item.status === 'Suivi partiel') return item.assignee
-    ? `Destinataire connu : ${item.assignee}`
+  if (item.status === 'Suivi partiel') return recipients
+    ? `Destinataire connu : ${recipients}`
     : 'Destinataire inconnu';
-  const recipient = item.assignee || 'à déterminer';
+  const recipient = recipients || 'à déterminer';
   const delivered = Boolean(item.deliveredAt || item.approvalId)
     || ['delivered', 'responded', 'response_received'].includes(item.deliveryStatus);
   return delivered ? `Envoyée à : ${recipient}` : `Destinataire prévu : ${recipient}`;
 }
 
 function approvalHistoryItem(item) {
-  return `<div class="approval-history-item"><span>Rév. ${Number(item.revision) || '—'} · ${escapeHtml(item.status || 'Inconnu')}</span>${item.taskKey ? `<code>${escapeHtml(item.taskKey)}</code>` : ''}${item.supersededBy ? `<small>Remplacée par ${escapeHtml(item.supersededBy)}</small>` : ''}${item.comment ? `<small>${escapeHtml(item.comment)}</small>` : ''}</div>`;
+  const recipients = formatApprovalRecipients(item.assignee);
+  return `<div class="approval-history-item"><span>Rév. ${Number(item.revision) || '—'} · ${escapeHtml(item.status || 'Inconnu')}</span>${item.taskKey ? `<code>${escapeHtml(item.taskKey)}</code>` : ''}${recipients ? `<small>Destinataire(s) : ${escapeHtml(recipients)}</small>` : ''}${item.responder ? `<small>Répondant : ${escapeHtml(item.responder)}</small>` : ''}${item.supersededBy ? `<small>Remplacée par ${escapeHtml(item.supersededBy)}</small>` : ''}${item.comment ? `<small>${escapeHtml(item.comment)}</small>` : ''}</div>`;
 }
 
 function deliveryLabel(status = '') {

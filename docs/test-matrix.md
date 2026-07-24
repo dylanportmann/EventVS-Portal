@@ -22,6 +22,7 @@
 - Recherche référence/titre/organisateur.
 - Filtres statut, date début/fin, équipe, retard, combinés.
 - Détail : 5 équipes, commentaires, répondants, heures livraison/réponse, réservations, chronologie, historique.
+- Destinataires Infra/IT multiples affichés avec virgules; répondant réel distinct reste visible.
 - Avant routage équipe sans tâche → `À venir`; après `RoutingComplete` → `Non requis`.
 - Import historique incomplet → `Suivi partiel`, jamais `Non requis` inventé.
 - Poll réussi sans changement actualise `Synchronisé à HH:mm:ss`.
@@ -47,6 +48,9 @@
 - Un refus actuel : global `Refusé`; toutes réponses positives : `Validé`.
 - Conflit révision HTTP 409 : zéro annulation et zéro tâche créée.
 - Validation Event historique jamais recréée.
+- Event → Jennifer; Infra → Lou + Oscar; Sécurité → Julien; Signalétique → Jennifer; IT → Dylan + Jean + Cédric.
+- Infra/IT : une seule réponse termine carte équipe; commentaire, date et répondant réel synchronisés sous 15 secondes.
+- Approval déjà ouverte avant déploiement garde destinataires et Approval ID; zéro annulation/recréation.
 
 ## Réservations
 
@@ -64,11 +68,11 @@
 
 ## Générateurs/migration
 
-- `python3 verify_approval_flows.py` : parent sans Approval groupée, quatre routes tâches, enfant une Approval/run, résumé task-driven avec trois tentatives ETag.
-- `python3 migrate_initial_approval_tasks.py --har <frais> --apply` : tâches initiales manquantes créées depuis IDs/réponses exacts historique; deuxième exécution crée zéro ligne.
+- `python3 verify_approval_flows.py` : mapping exact cinq équipes, cinq Approvals initiales séparées, parent sans Approval groupée, quatre routes tâches, enfant une Approval/run depuis `Assignee`, `approvalType=Basic`, résumé task-driven avec trois tentatives ETag.
+- `python3 migrate_initial_approval_tasks.py --har <frais> --apply` : tâches initiales manquantes créées depuis IDs/réponses/destinataires exacts historique; deuxième exécution crée zéro ligne.
 - `EventVS Approval Response Watcher` : tâche historique `Queued` utilise Approval ID existant, zéro `CreateAnApproval`, réponse écrite sous une minute puis visible sous 15 secondes.
 - Watcher historique : clé non courante ignorée; Approval et statut historique restent inchangés.
-- `npm run migration:plan -- export.json` : IDs groupés à annuler manuellement, tâches séparées à recréer, validations conservées.
+- `npm run migration:plan -- export.json` : audit uniquement; ne pas appliquer au changement routage. Approvals ouvertes existantes restent inchangées.
 - Cycle réel pilote : Outlook → Approval → liste tâches → demande → portail sous 15 secondes.
 
 ## Brouillon formulaire public

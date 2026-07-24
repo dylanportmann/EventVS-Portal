@@ -1,3 +1,5 @@
+import { approvalAssignee } from './approval-recipients.js';
+
 export const TECHNICAL_TEAMS = ['Infra', 'Sécurité', 'Signalétique', 'IT'];
 export const APPROVED_STATUSES = new Set(['Approuvé', 'Approuvé reporté']);
 export const OPEN_STATUSES = new Set(['En attente', 'Création en cours']);
@@ -115,7 +117,7 @@ export function replaceApprovalsForRevision(request, candidate, teams, now = new
       current: true,
       status: 'En attente',
       deliveryStatus: 'queued',
-      assignee: 'dylan.portmann@epfl.ch',
+      assignee: approvalAssignee(task.team),
       requestedAt: now,
       replacesTaskKey: replaced?.taskKey || (replaced
         ? approvalTaskKey(request.id, replaced.team, replaced.revision)
@@ -193,12 +195,14 @@ export function planLegacyApprovalMigration(request) {
       revision: Number(request.revision),
       taskKey: approvalTaskKey(request.id, approval.team, request.revision),
       scopeHash: scopeHashForTeam(request, approval.team),
-      assignee: 'dylan.portmann@epfl.ch',
+      assignee: approvalAssignee(approval.team),
       replacesApprovalId: approval.approvalId || '',
       deliveryStatus: 'queued',
     }));
   const preserved = current
     .filter((approval) => approval.team === 'Event' || !isOpenApproval(approval))
-    .map(({ team, status, revision, taskKey = '' }) => ({ team, status, revision, taskKey }));
+    .map(({ team, status, revision, taskKey = '', assignee = '' }) => ({
+      team, status, revision, taskKey, assignee,
+    }));
   return { requestId: request.id, revision: request.revision, manualCancelApprovalIds, tasks, preserved };
 }

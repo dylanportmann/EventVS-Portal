@@ -21,6 +21,11 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 - flux enfant `EventVS Team Approval` actif, ID `a120b719-5232-4cd6-9386-94913b427b05`;
 - flux `EventVS Approval Summary Sync` actif, ID `5ff9b6f1-d404-4181-94f1-b2bda03c29e2`;
 - flux `EventVS Approval Response Watcher` actif, ID `44651d66-275b-4857-843e-377399e4b826`; surveille seulement Approvals historiques `Queued`;
+- routage équipe déployé le 24 juillet 2026 : Event Jennifer; Infra Lou + Oscar; Sécurité Julien; Signalétique Jennifer; IT Dylan + Jean + Cédric;
+- groupes Infra/IT restent `approvalType=Basic` : première réponse termine carte équipe;
+- six définitions live relues après déploiement : état `Started`, contenu identique aux JSON générés;
+- run historique demande 5 contrôlé après patch : 4/4 Approval IDs, run IDs et destinataires inchangés;
+- recette routage demande 9 créée sans réservation Outlook : une seule carte Event envoyée à Jennifer; suite technique attend réponse Jennifer;
 - dossier 8 corrigé : IT approuvé par Dylan à 11:53, global `Étude technique`, attente Infra seule;
 - connexion `Power Automate Management` intégrée active et flux API remplacé;
 - formulaire public avec brouillon local/autosave et expiration 30 jours déployé;

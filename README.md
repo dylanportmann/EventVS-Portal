@@ -6,6 +6,8 @@ SPA HTML/CSS/JavaScript pour suivi des demandes d'événements EPFL Valais Walli
 
 Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate, lecture/édition SharePoint et orchestration Approval séparée par équipe. Tâches Approval initiales/révisions sont source autoritative; résumé task-driven et portail se synchronisent automatiquement.
 
+Routage Approval vient de [`src/approval-recipients.json`](src/approval-recipients.json). Portail OTP reste Jennifer + Dylan. Groupes Infra/IT utilisent première réponse; historique conserve destinataires réellement utilisés.
+
 ## Développement
 
 ```bash

@@ -9,6 +9,7 @@ import {
   replaceApprovalsForRevision,
   scopeHashForTeam,
 } from '../src/approval-model.js';
+import { approvalAssignee } from '../src/approval-recipients.js';
 
 function request(overrides = {}) {
   return {
@@ -108,6 +109,22 @@ describe('approval model', () => {
     expect(rejected.approvals.find(({ team }) => team === 'Infra')).toMatchObject({ status: 'Refusé', comment: 'Capacité', responder: 'Dylan' });
   });
 
+  it('keeps first Infra group response and ignores later response', () => {
+    const first = applyApprovalResponse(request(), {
+      team: 'Infra', taskKey: '42|Infra|3', revision: 3, scopeHash: 'old-infra',
+      outcome: 'Approve', comment: 'Salle OK', responder: 'lou.mahieu@epfl.ch',
+    }, '2026-07-24T12:00:00Z');
+    const second = applyApprovalResponse(first.request, {
+      team: 'Infra', taskKey: '42|Infra|3', revision: 3, scopeHash: 'old-infra',
+      outcome: 'Reject', comment: 'Trop tard', responder: 'oscar.teti@epfl.ch',
+    }, '2026-07-24T12:00:05Z');
+    expect(second.ignored).toBe(true);
+    expect(second.request.approvals.find(({ team }) => team === 'Infra')).toMatchObject({
+      status: 'Approuvé', comment: 'Salle OK', responder: 'lou.mahieu@epfl.ch',
+      respondedAt: '2026-07-24T12:00:00Z',
+    });
+  });
+
   it('plans manual cancellation and separate tasks for grouped legacy Approval', () => {
     const legacy = request({
       approvals: [
@@ -120,7 +137,10 @@ describe('approval model', () => {
     const plan = planLegacyApprovalMigration(legacy);
     expect(plan.manualCancelApprovalIds).toEqual(['group-id']);
     expect(plan.tasks.map(({ taskKey }) => taskKey)).toEqual(['42|Infra|3', '42|Sécurité|3']);
-    expect(plan.tasks.every(({ assignee }) => assignee === 'dylan.portmann@epfl.ch')).toBe(true);
+    expect(plan.tasks.map(({ team, assignee }) => [team, assignee])).toEqual([
+      ['Infra', approvalAssignee('Infra')],
+      ['Sécurité', approvalAssignee('Sécurité')],
+    ]);
     expect(plan.preserved.map(({ team }) => team)).toEqual(['Event', 'IT']);
   });
 });
