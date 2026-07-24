@@ -21,8 +21,11 @@
 - Pagination stable, taille 12 puis 100 max côté API.
 - Recherche référence/titre/organisateur.
 - Filtres statut, date début/fin, équipe, retard, combinés.
-- Détail : 5 équipes, commentaires, réservations, chronologie, historique.
-- Import historique incomplet → `Historique non disponible`, jamais données inventées.
+- Détail : 5 équipes, commentaires, répondants, heures livraison/réponse, réservations, chronologie, historique.
+- Avant routage équipe sans tâche → `À venir`; après `RoutingComplete` → `Non requis`.
+- Import historique incomplet → `Suivi partiel`, jamais `Non requis` inventé.
+- Poll réussi sans changement actualise `Synchronisé à HH:mm:ss`.
+- Poll échoué affiche avertissement discret; focus/retour onglet visible relance lecture immédiate.
 
 ## Modification
 
@@ -40,7 +43,7 @@
 - Deux équipes touchées : deux `taskKey`, Approval IDs et runs distincts.
 - Révision rapide : ancien run annulé ou réponse neutralisée par cinq clés.
 - `CancelFlowRun` échoue : `cancel_failed`, email obsolescence, nouvelle tâche active.
-- Réponses équipes simultanées : relecture ETag, trois essais, aucune équipe écrasée.
+- Réponses équipes simultanées : trois relectures complètes + écritures ETag séquentielles, aucune équipe écrasée.
 - Un refus actuel : global `Refusé`; toutes réponses positives : `Validé`.
 - Conflit révision HTTP 409 : zéro annulation et zéro tâche créée.
 - Validation Event historique jamais recréée.
@@ -61,7 +64,8 @@
 
 ## Générateurs/migration
 
-- `python3 verify_approval_flows.py` : parent sans Approval groupée, quatre routes tâches, enfant une Approval/run, retries ETag = 3.
+- `python3 verify_approval_flows.py` : parent sans Approval groupée, quatre routes tâches, enfant une Approval/run, résumé task-driven avec trois tentatives ETag.
+- `python3 migrate_initial_approval_tasks.py --har <frais> --apply` : tâches initiales manquantes créées depuis IDs/réponses exacts historique; deuxième exécution crée zéro ligne.
 - `npm run migration:plan -- export.json` : IDs groupés à annuler manuellement, tâches séparées à recréer, validations conservées.
 - Cycle réel pilote : Outlook → Approval → liste tâches → demande → portail sous 15 secondes.
 

@@ -12,10 +12,12 @@ export const GLOBAL_STATUSES = [
 ];
 
 export const TEAM_STATUSES = [
+  'À venir',
   'Non requis',
   'En attente',
   'Approuvé',
   'Refusé',
+  'Suivi partiel',
   'Obsolète',
   'Approuvé reporté',
 ];

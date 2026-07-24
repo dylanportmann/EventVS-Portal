@@ -4,7 +4,7 @@ import { AuthService, MockAuthService } from './auth.js';
 import { getConfig, missingConfig } from './config.js';
 import { MockEventVsApi } from './mock-data.js';
 import { PortalSession } from './session.js';
-import { AUTO_REFRESH_INTERVAL_MS, canAutoRefresh, changed } from './polling.js';
+import { AUTO_REFRESH_INTERVAL_MS, canAutoRefresh } from './polling.js';
 import { buildChangeSet, setAtPath } from './routing-rules.js';
 import {
   changePreviewView,
@@ -295,7 +295,7 @@ class EventVsApp {
     try {
       if (route === 'detail' && requestId) {
         const latest = await this.api.getRequest(requestId);
-        if (this.state.route === route && this.state.request?.id === requestId && !this.state.editOpen && changed(this.state.request, latest)) {
+        if (this.state.route === route && this.state.request?.id === requestId && !this.state.editOpen) {
           this.state.request = latest;
           this.renderShell(detailView(latest), 'detail');
         }
@@ -308,13 +308,26 @@ class EventVsApp {
           pageSize: this.config.pageSize,
           filters: this.state.filters,
         });
-        if (this.state.route === route && !this.state.editOpen && changed(this.state.result, latest)) {
+        if (this.state.route === route && !this.state.editOpen) {
           this.state.result = latest;
           this.renderShell(dashboardView(this.state));
         }
       }
     } catch {
-      // Manual refresh keeps visible error handling; background polling stays quiet.
+      const warning = 'Mise à jour automatique impossible. Nouvelle tentative dans 15 secondes.';
+      if (route === 'detail' && this.state.request?.id === requestId && !this.state.editOpen) {
+        this.state.request = {
+          ...this.state.request,
+          sync: { ...(this.state.request.sync || {}), status: 'error', warning, failedAt: new Date().toISOString() },
+        };
+        this.renderShell(detailView(this.state.request), 'detail');
+      } else if (route === 'dashboard' && this.state.result && !this.state.editOpen) {
+        this.state.result = {
+          ...this.state.result,
+          sync: { ...(this.state.result.sync || {}), status: 'error', warning, failedAt: new Date().toISOString() },
+        };
+        this.renderShell(dashboardView(this.state));
+      }
     } finally {
       this.polling = false;
     }

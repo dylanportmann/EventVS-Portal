@@ -73,7 +73,7 @@ export function dashboardView(state) {
   return `
     <header class="topbar">
       <div><p class="eyebrow">Vue opérationnelle</p><h1>Demandes d'événements</h1><p>Validations, ressources et points d'attente en un coup d'œil.</p></div>
-      <div class="top-actions"><button class="button secondary" data-action="refresh">Actualiser</button></div>
+      <div class="top-actions">${syncIndicator(result?.sync)}<button class="button secondary" data-action="refresh">Actualiser</button></div>
     </header>
     <section class="stats" aria-label="Indicateurs">
       ${stat('Demandes', counts.total, 'Total suivi', '#7b87a0')}
@@ -126,7 +126,7 @@ export function detailView(request, { loading = false } = {}) {
     <button class="back-link" data-action="back">← Retour aux demandes</button>
     <section class="detail-hero">
       <div><span class="status ${slug(request.status)}">${escapeHtml(request.status)}</span><h1>${escapeHtml(request.title)}</h1><div class="detail-meta"><span>${escapeHtml(request.id)}</span><span>${formatDate(request.dateStart)} · ${escapeHtml(request.startTime)}–${escapeHtml(request.endTime)}</span><span>${escapeHtml(request.organizer?.name)}</span></div></div>
-      <div class="detail-actions"><span class="revision">Révision ${request.revision}</span><button class="button secondary" data-action="refresh">Actualiser</button>${editable ? '<button class="button" data-action="edit">Modifier</button>' : ''}${cancellable ? '<button class="button danger" data-action="open-cancel">Annuler et supprimer</button>' : ''}</div>
+      <div class="detail-actions">${syncIndicator(request.sync)}<span class="revision">Révision ${request.revision}</span><button class="button secondary" data-action="refresh">Actualiser</button>${editable ? '<button class="button" data-action="edit">Modifier</button>' : ''}${cancellable ? '<button class="button danger" data-action="open-cancel">Annuler et supprimer</button>' : ''}</div>
     </section>
     <div class="detail-grid">
       <div>
@@ -194,7 +194,7 @@ function approvals(items = []) {
     return `<article class="approval-team">
       <div class="approval-current">
         <span class="approval-dot ${APPROVED_STATUSES.has(active.status) ? 'ok' : ''}" aria-hidden="true">${APPROVED_STATUSES.has(active.status) ? '✓' : '•'}</span>
-        <div class="approval-copy"><strong>${escapeHtml(team)}</strong><span>${escapeHtml(active.assignee || 'Aucun destinataire')} · rév. ${Number(active.revision) || '—'}</span></div>
+        <div class="approval-copy"><strong>${escapeHtml(team)}</strong><span>${escapeHtml(recipientLabel(active))} · rév. ${Number(active.revision) || '—'}</span></div>
         <span class="status ${slug(active.status)}">${escapeHtml(active.status)}</span>
         ${approvalMetadata(active)}
         ${active.comment ? `<p class="approval-comment">${escapeHtml(active.comment)}</p>` : ''}
@@ -210,9 +210,23 @@ function approvalMetadata(item) {
     ${item.taskKey ? `<span>Clé ${escapeHtml(item.taskKey)}</span>` : ''}
     ${item.scopeHash ? `<span>Scope ${escapeHtml(item.scopeHash)}</span>` : ''}
     ${delivery ? `<span>Livraison ${escapeHtml(delivery)}</span>` : ''}
+    ${item.deliveredAt ? `<span>Envoyée ${formatDate(item.deliveredAt, true)}</span>` : ''}
     ${item.replacesTaskKey ? `<span>Remplace ${escapeHtml(item.replacesTaskKey)}</span>` : ''}
+    ${item.responder ? `<span>Répondant ${escapeHtml(item.responder)}</span>` : ''}
     ${item.respondedAt ? `<span>Réponse ${formatDate(item.respondedAt, true)}</span>` : ''}
+    ${item.error ? `<span>Suivi ${escapeHtml(item.error)}</span>` : ''}
   </div>`;
+}
+
+function recipientLabel(item) {
+  if (item.status === 'Non requis') return 'Aucun envoi requis';
+  if (item.status === 'Suivi partiel') return item.assignee
+    ? `Destinataire connu : ${item.assignee}`
+    : 'Destinataire inconnu';
+  const recipient = item.assignee || 'à déterminer';
+  const delivered = Boolean(item.deliveredAt || item.approvalId)
+    || ['delivered', 'responded', 'response_received'].includes(item.deliveryStatus);
+  return delivered ? `Envoyée à : ${recipient}` : `Destinataire prévu : ${recipient}`;
 }
 
 function approvalHistoryItem(item) {
@@ -221,6 +235,8 @@ function approvalHistoryItem(item) {
 
 function deliveryLabel(status = '') {
   return ({
+    upcoming: 'à venir',
+    creating: 'création en cours',
     queued: 'en file',
     delivered: 'envoyée',
     responded: 'répondue',
@@ -229,7 +245,22 @@ function deliveryLabel(status = '') {
     create_failed: 'création échouée',
     obsolete: 'obsolète',
     not_required: 'non requise',
+    partial: 'suivi partiel',
   })[status] || status;
+}
+
+export function syncIndicator(sync = {}) {
+  const timestamp = sync?.checkedAt || sync?.failedAt;
+  if (!timestamp) return '<span class="sync-indicator partial">Synchronisation en attente</span>';
+  const parsed = new Date(timestamp);
+  const time = Number.isNaN(parsed.getTime()) ? '—' : new Intl.DateTimeFormat('fr-CH', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).format(parsed);
+  const warning = sync.warning ? ` title="${escapeHtml(sync.warning)}"` : '';
+  const label = sync.status === 'error'
+    ? `Synchronisation échouée · ${sync.checkedAt ? 'dernière synchronisation' : 'tentative'} ${time}`
+    : `Synchronisé à ${time}${sync.status === 'partial' ? ' · suivi partiel' : ''}`;
+  return `<span class="sync-indicator ${escapeHtml(sync.status || 'partial')}"${warning}>${escapeHtml(label)}</span>`;
 }
 
 function timeline(items = []) {

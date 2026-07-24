@@ -135,9 +135,15 @@ h1, h2, h3 { font-family: 'Segoe UI', system-ui, sans-serif; }
 .status { display: inline-flex; align-items: center; min-height: 25px; padding: 0 9px; border-radius: 999px; background: #eef0f3; color: #515866; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .status.valide, .status.approuve { background: var(--green-soft); color: var(--green); }
 .status.refuse, .status.obsolete, .status.capacite-depassee, .status.ressource-indisponible { background: var(--red-soft); color: #ad2822; }
-.status.en-attente, .status.validation-event-en-cours, .status.etude-technique, .status.modification-en-cours, .status.annulation-en-cours { background: var(--amber-soft); color: var(--amber); }
+.status.en-attente, .status.a-venir, .status.validation-event-en-cours, .status.etude-technique, .status.modification-en-cours, .status.annulation-en-cours { background: var(--amber-soft); color: var(--amber); }
 .status.suppression-bloquee { background: var(--red-soft); color: #ad2822; }
 .status.approuve-reporte { background: var(--blue-soft); color: var(--blue); }
+.status.suivi-partiel { background: #eef0f3; color: #616875; }
+.sync-indicator { align-self: center; color: var(--muted); font-size: 11px; line-height: 1.35; }
+.sync-indicator.error { color: #ad2822; }
+.sync-indicator.partial { color: var(--amber); }
+.detail-hero .sync-indicator { color: #c6cbd4; }
+.detail-hero .sync-indicator.error { color: #ffb6b0; }
 .empty { padding: 58px 24px; text-align: center; color: var(--muted); }
 .empty h2 { margin: 0 0 7px; color: var(--ink); font-size: 18px; }
 .pagination { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }

@@ -61,29 +61,31 @@ Erreur :
 - Borner `pageSize` à 100.
 - Filtrer côté SharePoint avec colonnes indexées; échapper apostrophes OData.
 - Recherche texte large : récupérer page candidate indexée, puis filtrer titre/référence/organisateur; retourner pagination stable par `DerniereActionUtc desc, ID desc`.
-- Réponse : `items`, `page`, `pageSize`, `total`, `counts` (`total`, `active`, `waiting`, `late`).
+- Réponse : `items`, `page`, `pageSize`, `total`, `counts` (`total`, `active`, `waiting`, `late`) et `sync`.
+- `status`, `currentStep` et `waitingFor` proviennent du résumé `_eventvs`; aucune valeur d'attente codée en dur.
 - Item liste ne contient ni commentaires, ni téléphones, ni données JSON complètes.
 
 ## `getRequest`
 
-Lire demande + quatre listes liées en parallèle. Retourner :
+Lire demande et tâches `EventVS Approval Tasks` par `RequestId`. Retourner :
 
 - demande normalisée;
-- cinq validations, dont `Non requis`;
+- cinq validations réelles avec historique, destinataire, Approval ID, livraison, réponse, commentaire et répondant;
 - chronologie étapes;
 - historique modifications;
 - réservations;
 - `allowedActions`, calculé côté flux depuis gestionnaire actif.
 
-Demande importée sans traces : `EtapeActuelle = Historique non disponible`, tableaux vides. Ne pas inventer approvers/dates.
+Avant fin routage, équipe sans tâche = `À venir`. Après `RoutingComplete=true`, équipe sans tâche = `Non requis`. Event sans trace = `Suivi partiel`. Ne jamais inventer approvers/dates.
 
 ## `updateRequest` et flux enfant
 
-Trois composants :
+Quatre composants :
 
 1. `EventVS Portal API` modifie demande et enfile tâches.
 2. Liste `EventVS Approval Tasks` porte état/audit de chaque équipe.
 3. `EventVS Team Approval`, déclenché sur création item, crée exactement une Approval puis attend réponse dans run isolé.
+4. `EventVS Approval Summary Sync`, déclenché sur modification tâche, relit toutes tâches et écrit résumé demande avec trois lectures/écritures ETag séquentielles.
 
 Ordre transactionnel :
 
@@ -104,7 +106,7 @@ Validation Event initiale ne repart jamais après modification. `title` relance 
 
 ## Garde réponse Approval
 
-Flux enfant stocke `ApprovalId`, `FlowRunId`, `ChildFlowId`, `taskKey`, révision et scope. Avant application réponse :
+Flux enfant ignore `Origin=Initial`, puis stocke `ApprovalId`, `FlowRunId`, `ChildFlowId`, `taskKey`, révision et scope pour `Origin=Revision`. Flux initial écrit lui-même tâches initiales autour actions Approvals. Avant application réponse :
 
 ```text
 task.Status == "Pending"
@@ -115,7 +117,7 @@ AND task.taskKey == demande.approvalState[team].taskKey
 AND task.scopeHash == demande.approvalState[team].scopeHash
 ```
 
-Sinon : tâche `Obsolete`, journal `Réponse tardive ignorée`, demande inchangée. Mise à jour demande utilise ETag et maximum trois essais; conflit final devient `response_conflict` pour traitement manuel.
+Sinon : tâche `Obsolete`, journal `Réponse tardive ignorée`, demande inchangée. Tâches restent source autoritative; synchronisation agrège depuis relecture complète. Chaque conflit ETag déclenche nouvelle relecture, maximum trois tentatives.
 
 ## Résultat final
 

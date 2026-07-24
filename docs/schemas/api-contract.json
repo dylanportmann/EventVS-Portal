@@ -129,15 +129,35 @@
     },
     "approvalTask": {
       "type": "object",
-      "required": ["team", "taskKey", "scopeHash", "revision", "deliveryStatus"],
+      "required": ["team", "revision", "status", "deliveryStatus"],
       "properties": {
         "team": { "$ref": "#/$defs/team" },
-        "taskKey": { "type": "string", "pattern": "^[^|]+\\|[^|]+\\|[0-9]+$" },
-        "scopeHash": { "type": "string", "minLength": 8, "maxLength": 64 },
+        "taskKey": { "type": "string", "pattern": "^$|^[^|]+\\|[^|]+\\|[0-9]+$" },
+        "scopeHash": { "type": "string", "maxLength": 64 },
         "revision": { "type": "integer", "minimum": 1 },
-        "deliveryStatus": { "enum": ["queued", "creating", "delivered", "responded", "canceled", "cancel_failed", "create_failed", "obsolete", "response_conflict", "not_required"] },
+        "origin": { "enum": ["Initial", "Revision"] },
+        "status": { "enum": ["À venir", "Non requis", "En attente", "Approuvé", "Refusé", "Obsolète", "Suivi partiel"] },
+        "deliveryStatus": { "enum": ["upcoming", "partial", "queued", "creating", "delivered", "responded", "response_received", "canceled", "cancel_failed", "create_failed", "obsolete", "response_conflict", "not_required"] },
+        "assignee": { "type": "string" },
+        "approvalId": { "type": "string" },
+        "requestedAt": { "type": ["string", "null"], "format": "date-time" },
+        "deliveredAt": { "type": ["string", "null"], "format": "date-time" },
+        "respondedAt": { "type": ["string", "null"], "format": "date-time" },
+        "response": { "type": "string" },
+        "comment": { "type": "string" },
+        "responder": { "type": "string" },
+        "routingComplete": { "type": "boolean" },
         "replacesTaskKey": { "type": "string" },
         "supersededBy": { "type": "string" }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "required": ["checkedAt", "status"],
+      "properties": {
+        "checkedAt": { "type": "string", "format": "date-time" },
+        "status": { "enum": ["ok", "partial", "error"] },
+        "warning": { "type": "string" }
       }
     },
     "approvalChanges": {
@@ -153,7 +173,7 @@
     "sessionToken": { "type": "string", "minLength": 72, "maxLength": 72 },
     "team": { "enum": ["", "Event", "Infra", "Sécurité", "Signalétique", "IT"] },
     "globalStatus": {
-      "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Annulation en cours", "Suppression bloquée", "Validé", "Refusé", "Capacité dépassée", "Ressource indisponible"]
+      "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Annulation en cours", "Suppression bloquée", "Validé", "Refusé", "Suivi partiel", "Capacité dépassée", "Ressource indisponible"]
     }
   }
 }

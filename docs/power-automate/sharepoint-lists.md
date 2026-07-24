@@ -27,6 +27,7 @@ Activer index SharePoint sur `StatutGlobal`, `DateEvent`, `DerniereActionUtc`, `
 | `RequestId` | ID demande texte |
 | `RequestItemId` | ID item Demandes numérique |
 | `Team` | Event/Infra/Sécurité/Signalétique/IT |
+| `Origin` | `Initial` ou `Revision`; flux enfant traite seulement `Revision` |
 | `Status` | `Queued`, `Creating`, `Pending`, `Approuvé`, `Refusé`, `Obsolete`, `ResponseConflict` |
 | `DeliveryStatus` | `queued`, `creating`, `delivered`, `responded`, `canceled`, `cancel_failed`, `obsolete`, `response_conflict` |
 | `Assignee` | Email; pilote `dylan.portmann@epfl.ch` |
@@ -34,12 +35,13 @@ Activer index SharePoint sur `StatutGlobal`, `DateEvent`, `DerniereActionUtc`, `
 | `FlowRunId`, `ChildFlowId` | IDs internes, jamais exposés API |
 | `ScopeHash` | Texte 64 caractères |
 | `Revision` | Nombre entier |
-| `RequestedUtc`, `RespondedUtc`, `ObsoletedUtc`, `CanceledUtc` | Date/heure |
+| `RequestedUtc`, `DeliveredUtc`, `RespondedUtc`, `ObsoletedUtc`, `CanceledUtc` | Date/heure |
+| `RoutingComplete` | Oui/non; porté par tâche Event initiale après routage technique |
 | `Response`, `Comment`, `Responder`, `Error` | Audit réponse/erreur |
 | `ReplacesTaskKey`, `SupersededByTaskKey` | Chaîne remplacement |
 | `PayloadJson` | Titre, motif, acteur; JSON brut |
 
-`Title` indexé avec `EnforceUniqueValues=true`. Une réponse compte seulement si cinq corrélations `requestId + team + revision + taskKey + scopeHash` correspondent et tâche reste `Pending`.
+`Title` indexé avec `EnforceUniqueValues=true`; `RequestId` indexé pour lectures portail/synchronisation. Une réponse compte seulement si cinq corrélations `requestId + team + revision + taskKey + scopeHash` correspondent et tâche reste `Pending`.
 
 ## EventVSHistory
 

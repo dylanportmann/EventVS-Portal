@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cancelDialogView, changePreviewView, dashboardView, detailView, history, otpView } from '../src/views.js';
+import { cancelDialogView, changePreviewView, dashboardView, detailView, history, otpView, syncIndicator } from '../src/views.js';
 
 describe('views', () => {
   it('escapes API strings before rendering', () => {
@@ -43,6 +43,45 @@ describe('views', () => {
     expect(html).toContain('42|Infra|4');
     expect(html).toContain('Remplace 42|Infra|3');
     expect(html).toContain('Historique (1)');
+  });
+
+  it('renders real Approval delivery, responder, comment, and sync state', () => {
+    const html = detailView({
+      id: '8', revision: 1, title: 'Event', status: 'Étude technique', dateStart: '2026-09-01', startTime: '09:00', endTime: '17:00',
+      organizer: {}, fields: {}, approvals: [{
+        team: 'Event', current: true, taskKey: '8|Event|1', revision: 1, status: 'Approuvé',
+        deliveryStatus: 'responded', assignee: 'dylan.portmann@epfl.ch', deliveredAt: '2026-07-24T08:00:00Z',
+        respondedAt: '2026-07-24T08:05:00Z', responder: 'dylan.portmann@epfl.ch', comment: 'OK',
+      }], timeline: [], history: [], reservations: [], waitingFor: ['Infra'], allowedActions: [],
+      sync: { checkedAt: '2026-07-24T08:06:07Z', status: 'ok' },
+    });
+    expect(html).toContain('Envoyée à : dylan.portmann@epfl.ch');
+    expect(html).toContain('Répondant dylan.portmann@epfl.ch');
+    expect(html).toContain('OK');
+    expect(html).toContain('Synchronisé à');
+  });
+
+  it('distinguishes planned, not-required, and partial cards', () => {
+    const base = {
+      id: '8', revision: 1, title: 'Event', status: 'Validation Event en cours', dateStart: '2026-09-01', startTime: '09:00', endTime: '17:00',
+      organizer: {}, fields: {}, timeline: [], history: [], reservations: [], waitingFor: ['Event'], allowedActions: [],
+    };
+    const html = detailView({ ...base, approvals: [
+      { team: 'Event', revision: 1, status: 'En attente', deliveryStatus: 'creating', assignee: 'dylan.portmann@epfl.ch' },
+      { team: 'Infra', revision: 1, status: 'À venir', deliveryStatus: 'upcoming', assignee: '' },
+      { team: 'IT', revision: 1, status: 'Non requis', deliveryStatus: 'not_required', assignee: '' },
+      { team: 'Sécurité', revision: 1, status: 'Suivi partiel', deliveryStatus: 'partial', assignee: '' },
+    ] });
+    expect(html).toContain('Destinataire prévu : dylan.portmann@epfl.ch');
+    expect(html).toContain('À venir');
+    expect(html).toContain('Aucun envoi requis');
+    expect(html).toContain('Destinataire inconnu');
+  });
+
+  it('shows discrete warning after failed poll', () => {
+    const html = syncIndicator({ failedAt: '2026-07-24T08:06:07Z', status: 'error', warning: 'API inaccessible' });
+    expect(html).toContain('Synchronisation échouée');
+    expect(html).toContain('API inaccessible');
   });
 
   it('renders OTP screen without trusting email HTML', () => {

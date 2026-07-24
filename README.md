@@ -4,7 +4,7 @@ SPA HTML/CSS/JavaScript pour suivi des demandes d'événements EPFL Valais Walli
 
 ## État
 
-Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate, lecture/édition SharePoint et orchestration Approval séparée par équipe. Remplacement ciblé et `CancelFlowRun` validés sur cycle réel.
+Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate, lecture/édition SharePoint et orchestration Approval séparée par équipe. Tâches Approval initiales/révisions sont source autoritative; résumé task-driven et portail se synchronisent automatiquement.
 
 ## Développement
 
@@ -48,7 +48,9 @@ Définitions opérationnelles générées depuis dossier parent `Eventvs` :
 
 - `build_approval_tasks_provisioner.py` : liste SharePoint et clé `requestId|team|revision` unique;
 - `build_team_approval.py` : un run et une Approval par tâche/équipe;
+- `build_approval_summary_sync.py` : agrégation tâche → demande, trois tentatives avec relecture complète et ETag;
 - `build_portal_api.py` : remplacement ciblé, `CancelFlowRun`, réponse `approvalChanges`;
+- `migrate_initial_approval_tasks.py` : rattachement idempotent Approvals initiales depuis historique, sans recréation;
 - `build_cancellation_provisioner.py` / `build_delete_event.py` : tombstone, IDs Outlook exacts et worker suppression;
 - `instrument_event_flow_cancellation.py` : enregistrement runs initiaux et réservations futures;
 - `deploy_event_cancellation.py` : déploiement complet après HAR frais;
