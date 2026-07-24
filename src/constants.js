@@ -5,6 +5,7 @@ export const GLOBAL_STATUSES = [
   'Modification en cours',
   'Annulation en cours',
   'Suppression bloquée',
+  'Suivi partiel',
   'Validé',
   'Refusé',
   'Capacité dépassée',
