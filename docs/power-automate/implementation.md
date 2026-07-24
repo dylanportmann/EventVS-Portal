@@ -8,12 +8,15 @@ Flux séparé `EventVS Portal API`, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a` :
 
 1. Trigger HTTP `All`; URL nécessairement publique dans SPA.
 2. `startSession` accepte seulement `dylan.portmann@epfl.ch` et `jennifer.brady@epfl.ch`.
-3. Code 6 chiffres envoyé depuis `event-vs@epfl.ch`, valide 10 minutes; renvoi limité à une fois/minute.
-4. Sessions aléatoires 72 caractères, valides 8 h, stockées liste SharePoint masquée `EventVS Portal Sessions`; `ReadSecurity=2` et `WriteSecurity=2` empêchent membres site de lire/modifier éléments créés par connexion flow.
+3. Code 6 chiffres envoyé depuis `event-vs@epfl.ch`, valide 10 minutes; renvoi limité à une fois/minute. `challengeId` rend retry idempotent : même UUID ne renvoie jamais second email.
+4. `verifySession` réclame ligne pendante correspondant à email + OTP encore valide; ETag garantit usage unique. `challengeId` reste clé idempotence côté démarrage, pas facteur d’authentification. Chaque challenge devient sa propre session aléatoire 72 caractères, valide 8 h. Nouvelle connexion n’invalide aucun autre onglet/appareil. Liste SharePoint masquée `EventVS Portal Sessions`; `ReadSecurity=2` et `WriteSecurity=2` empêchent membres site de lire/modifier éléments créés par connexion flow.
 5. `listRequests`/`getRequest` vérifient session avant lecture liste métier.
 6. Requêtes navigateur utilisent `text/plain` pour éviter preflight Authorization; aucun cookie.
 7. Entrées sensibles du trigger/actions marquées Secure Inputs.
 8. `updateRequest` actif avec `expectedRevision`, lock ETag et tâches Approval séparées.
+9. `clientRequestId` non sensible reste visible dans historique run; email, OTP et token restent Secure Inputs/Outputs. Nettoyage quotidien supprime lignes expirées depuis plus de 24 h.
+
+Schéma session : `ChallengeId` indexé, `EmailAddress`, `RecordType`, `OtpCode`, `SessionToken`, `ExpiresUtc`, `LastSentUtc`, `RecordStatus`. Deux lignes `Lock` utilisent ETag SharePoint pour sérialiser création challenge par compte. Migration conserve `Title` legacy et sessions ouvertes; guards lisent colonnes nouvelles avec fallback ancien format.
 
 Accès portail reste limité à Jennifer Brady et Dylan Portmann. Destinataires Approvals n’obtiennent aucun accès portail.
 
@@ -51,6 +54,8 @@ Valider `action`; valeur inconnue → HTTP 400. Chaque branche termine par actio
 ```json
 {"ok":true,"data":{}}
 ```
+
+Toutes réponses ajoutent `meta.clientRequestId` et `meta.serverTime`. `startSession` retourne `challengeId`, `expiresIn`, `retryAfter`, `reused`. Erreurs auth dédiées : `RATE_LIMITED` 429, `CHALLENGE_CONFLICT` 409, `OTP_DELIVERY_FAILED` 502.
 
 Erreur :
 

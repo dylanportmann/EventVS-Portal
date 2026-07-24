@@ -18,7 +18,9 @@
       "required": ["action", "email"],
       "properties": {
         "action": { "const": "startSession" },
-        "email": { "type": "string", "format": "email", "maxLength": 320 }
+        "email": { "type": "string", "format": "email", "maxLength": 320 },
+        "challengeId": { "$ref": "#/$defs/challengeId" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" }
       }
     },
     "verifySession": {
@@ -28,7 +30,9 @@
       "properties": {
         "action": { "const": "verifySession" },
         "email": { "type": "string", "format": "email", "maxLength": 320 },
-        "code": { "type": "string", "pattern": "^[0-9]{6}$" }
+        "code": { "type": "string", "pattern": "^[0-9]{6}$" },
+        "challengeId": { "$ref": "#/$defs/challengeId" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" }
       }
     },
     "listRequests": {
@@ -37,6 +41,7 @@
       "required": ["action", "payload", "sessionToken"],
       "properties": {
         "action": { "const": "listRequests" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" },
         "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "payload": {
           "type": "object",
@@ -66,6 +71,7 @@
       "required": ["action", "requestId", "sessionToken"],
       "properties": {
         "action": { "const": "getRequest" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" },
         "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }
       }
@@ -76,6 +82,7 @@
       "required": ["action", "requestId", "expectedRevision", "changes", "sessionToken"],
       "properties": {
         "action": { "const": "updateRequest" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" },
         "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
         "expectedRevision": { "type": "integer", "minimum": 1 },
@@ -110,6 +117,7 @@
       "required": ["action", "requestId", "expectedRevision", "confirmation", "sessionToken"],
       "properties": {
         "action": { "const": "cancelEvent" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" },
         "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "requestId": { "type": "string", "minLength": 1, "maxLength": 100 },
         "expectedRevision": { "type": "integer", "minimum": 1 },
@@ -123,6 +131,7 @@
       "required": ["action", "requestId", "sessionToken"],
       "properties": {
         "action": { "const": "getCancellationStatus" },
+        "clientRequestId": { "$ref": "#/$defs/clientRequestId" },
         "sessionToken": { "$ref": "#/$defs/sessionToken" },
         "requestId": { "type": "string", "minLength": 1, "maxLength": 100 }
       }
@@ -171,6 +180,8 @@
       }
     },
     "sessionToken": { "type": "string", "minLength": 72, "maxLength": 72 },
+    "challengeId": { "type": "string", "format": "uuid" },
+    "clientRequestId": { "type": "string", "format": "uuid" },
     "team": { "enum": ["", "Event", "Infra", "Sécurité", "Signalétique", "IT"] },
     "globalStatus": {
       "enum": ["", "Reçu", "Validation Event en cours", "Étude technique", "Modification en cours", "Annulation en cours", "Suppression bloquée", "Validé", "Refusé", "Suivi partiel", "Capacité dépassée", "Ressource indisponible"]

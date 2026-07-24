@@ -44,6 +44,10 @@ class EventVsApp {
     this.autoRefreshTimer = null;
     this.cancellationTimer = null;
     this.polling = false;
+    this.otpSending = false;
+    this.otpCountdownTimer = null;
+    this.otpProgressTimer = null;
+    this.recoveringSession = false;
     this.bindGlobalEvents();
   }
 
@@ -109,7 +113,7 @@ class EventVsApp {
 
     const action = actionTarget.dataset.action;
     if (action === 'login') await this.login(actionTarget);
-    if (action === 'resend-otp') await this.sendOtp();
+    if (action === 'resend-otp') await this.sendOtp({ forceNew: true });
     if (action === 'logout') await this.logout();
     if (action === 'refresh') await this.refresh();
     if (action === 'back') location.hash = '#/dashboard';
@@ -176,6 +180,7 @@ class EventVsApp {
 
   async logout() {
     this.stopAutoRefresh();
+    this.stopOtpTimers();
     this.portalSession.clear();
     this.profile = null;
     await this.auth.logout();
@@ -190,17 +195,107 @@ class EventVsApp {
       this.startAutoRefresh();
       return;
     }
-    await this.sendOtp();
+    await this.sendOtp({ reuseExisting: true });
   }
 
-  async sendOtp() {
+  createChallenge(email) {
+    const now = Date.now();
+    return this.portalSession.setChallenge({
+      challengeId: globalThis.crypto.randomUUID(),
+      email,
+      expiresAt: new Date(now + 10 * 60_000).toISOString(),
+      retryAt: new Date(now + 60_000).toISOString(),
+    });
+  }
+
+  challengeRetryAfter(challenge) {
+    return Math.max(0, Math.ceil((Date.parse(challenge?.retryAt || 0) - Date.now()) / 1000));
+  }
+
+  renderOtp({ error = '', status = '', sending = this.otpSending } = {}) {
     const email = this.profile?.email || this.account?.username || '';
-    this.root.innerHTML = otpView({ email });
+    const challenge = this.portalSession.getChallenge(email);
+    this.root.innerHTML = otpView({
+      email,
+      error,
+      status,
+      sending,
+      retryAfter: this.challengeRetryAfter(challenge),
+    });
+    this.startOtpCountdown();
+  }
+
+  stopOtpTimers() {
+    if (this.otpCountdownTimer) window.clearInterval(this.otpCountdownTimer);
+    if (this.otpProgressTimer) window.clearTimeout(this.otpProgressTimer);
+    this.otpCountdownTimer = null;
+    this.otpProgressTimer = null;
+  }
+
+  startOtpCountdown() {
+    if (this.otpCountdownTimer) window.clearInterval(this.otpCountdownTimer);
+    this.otpCountdownTimer = window.setInterval(() => {
+      const button = this.root.querySelector('[data-action="resend-otp"]');
+      if (!button) {
+        window.clearInterval(this.otpCountdownTimer);
+        this.otpCountdownTimer = null;
+        return;
+      }
+      const challenge = this.portalSession.getChallenge(this.profile?.email || '');
+      const remaining = this.challengeRetryAfter(challenge);
+      button.disabled = this.otpSending || remaining > 0;
+      button.textContent = remaining > 0 ? `Renvoyer dans ${remaining} s` : 'Renvoyer le code';
+    }, 1000);
+  }
+
+  async sendOtp({ forceNew = false, reuseExisting = false } = {}) {
+    if (this.otpSending) return;
+    const email = this.profile?.email || this.account?.username || '';
+    let challenge = this.portalSession.getChallenge(email);
+    if (forceNew && this.challengeRetryAfter(challenge) > 0) {
+      this.renderOtp({ status: 'Un code est déjà en cours. Attendez avant le renvoi.' });
+      return;
+    }
+    if (!challenge || forceNew || !reuseExisting) challenge = this.createChallenge(email);
+
+    this.stopAutoRefresh();
+    this.otpSending = true;
+    this.renderOtp({ status: 'Envoi du code…', sending: true });
+    this.otpProgressTimer = window.setTimeout(() => {
+      const status = this.root.querySelector('#otp-status');
+      if (status) status.textContent = 'Power Automate traite encore la demande. Le formulaire reste utilisable.';
+    }, 15_000);
     try {
-      await this.api.startSession(email);
+      const result = await this.api.startSession(email, challenge.challengeId);
+      challenge = this.portalSession.setChallenge({
+        challengeId: result.challengeId || challenge.challengeId,
+        email,
+        expiresAt: new Date(Date.now() + (Number(result.expiresIn) || 600) * 1000).toISOString(),
+        retryAt: new Date(Date.now() + (Number(result.retryAfter) || 60) * 1000).toISOString(),
+      });
+      this.otpSending = false;
+      this.renderOtp({ status: result.reused ? 'Code déjà envoyé. Consultez email.' : 'Code envoyé.' });
       this.toast('Code envoyé.', 'success');
     } catch (error) {
-      this.root.innerHTML = otpView({ email, error: error.message });
+      this.otpSending = false;
+      if (error.code === 'RATE_LIMITED') {
+        const retryAfter = error.retryAfter || 60;
+        this.portalSession.setChallenge({
+          ...challenge,
+          challengeId: error.details?.challengeId || challenge.challengeId,
+          expiresAt: new Date(Date.now() + (Number(error.details?.expiresIn) || 600) * 1000).toISOString(),
+          retryAt: new Date(Date.now() + retryAfter * 1000).toISOString(),
+        });
+        this.renderOtp({ status: `Code déjà envoyé. Nouveau renvoi possible dans ${retryAfter} s.` });
+      } else if (error.code === 'TIMEOUT') {
+        this.renderOtp({ status: 'Traitement encore possible. Utilisez code reçu; sinon renvoyez après délai.' });
+      } else {
+        if (error.code === 'OTP_DELIVERY_FAILED') this.portalSession.clearChallenge();
+        this.renderOtp({ error: error.message });
+      }
+    } finally {
+      if (this.otpProgressTimer) window.clearTimeout(this.otpProgressTimer);
+      this.otpProgressTimer = null;
     }
   }
 
@@ -209,13 +304,33 @@ class EventVsApp {
     button.disabled = true;
     button.textContent = 'Vérification…';
     try {
-      const result = await this.api.verifySession(this.profile.email, form.elements.code.value.trim());
+      const challenge = this.portalSession.getChallenge(this.profile.email);
+      const result = await this.api.verifySession(
+        this.profile.email,
+        form.elements.code.value.trim(),
+        challenge?.challengeId || '',
+      );
       this.portalSession.set(result);
+      this.stopOtpTimers();
       await this.navigate();
       this.startAutoRefresh();
     } catch (error) {
-      this.root.innerHTML = otpView({ email: this.profile.email, error: error.message });
+      this.renderOtp({ error: error.message });
     }
+  }
+
+  async recoverPortalSession(error) {
+    if (!['SESSION_EXPIRED', 'SESSION_REQUIRED'].includes(error?.code) && error?.status !== 401) return false;
+    if (this.recoveringSession) return true;
+    this.recoveringSession = true;
+    this.stopAutoRefresh();
+    this.portalSession.clear();
+    try {
+      await this.sendOtp();
+    } finally {
+      this.recoveringSession = false;
+    }
+    return true;
   }
 
   async navigate() {
@@ -248,6 +363,7 @@ class EventVsApp {
       this.renderShell(dashboardView(this.state));
     } catch (error) {
       this.state.loading = false;
+      if (await this.recoverPortalSession(error)) return;
       this.renderShell(`${dashboardView(this.state).replace(/<section class="panel" aria-busy="false">[\s\S]*<\/section>$/, '')}${errorView(error.message)}`);
     }
   }
@@ -259,6 +375,7 @@ class EventVsApp {
       this.state.request = await this.api.getRequest(requestId);
       this.renderShell(detailView(this.state.request), 'detail');
     } catch (error) {
+      if (await this.recoverPortalSession(error)) return;
       this.renderShell(`<button class="back-link" data-action="back">← Retour aux demandes</button>${errorView(error.message)}`, 'detail');
     }
   }
@@ -313,7 +430,8 @@ class EventVsApp {
           this.renderShell(dashboardView(this.state));
         }
       }
-    } catch {
+    } catch (error) {
+      if (await this.recoverPortalSession(error)) return;
       const warning = 'Mise à jour automatique impossible. Nouvelle tentative dans 15 secondes.';
       if (route === 'detail' && this.state.request?.id === requestId && !this.state.editOpen) {
         this.state.request = {

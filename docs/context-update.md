@@ -16,6 +16,9 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 - licence Power Automate sans Premium;
 - flux `EventVS Portal API` créé et actif, ID `eb6857a7-3a07-4163-bcd9-6a6bb30baa5a`;
 - OTP autorisé pour Jennifer Brady et Dylan Portmann; session 8 h en SharePoint;
+- sessions OTP indépendantes par onglet/appareil; challenge idempotent, cooldown 60 s, récupération automatique sans boucle polling;
+- flux `EventVS Portal Session Cleanup` actif, ID `d552e081-a941-4954-a522-b0a030292d8d`; purge quotidienne des lignes expirées depuis plus de 24 h;
+- recette auth réelle du 24 juillet : `startSession` 202 puis retry 202 `reused`, `verifySession` 200, `listRequests` 200 et `getRequest` 200; aucun second email sur retry;
 - liste, détail et édition SharePoint actifs;
 - liste `EventVS Approval Tasks` active, ID `4bcbef74-433a-4166-a02d-452c5c461994`;
 - flux enfant `EventVS Team Approval` actif, ID `a120b719-5232-4cd6-9386-94913b427b05`;

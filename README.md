@@ -4,7 +4,7 @@ SPA HTML/CSS/JavaScript pour suivi des demandes d'événements EPFL Valais Walli
 
 ## État
 
-Pilote déployé : Entra `User.Read`, code email, session portail 8 h, API Power Automate, lecture/édition SharePoint et orchestration Approval séparée par équipe. Tâches Approval initiales/révisions sont source autoritative; résumé task-driven et portail se synchronisent automatiquement.
+Pilote déployé : Entra `User.Read`, code email, sessions portail indépendantes 8 h par onglet/appareil, API Power Automate, lecture/édition SharePoint et orchestration Approval séparée par équipe. Tâches Approval initiales/révisions sont source autoritative; résumé task-driven et portail se synchronisent automatiquement.
 
 Routage Approval vient de [`src/approval-recipients.json`](src/approval-recipients.json). Portail OTP reste Jennifer + Dylan. Groupes Infra/IT utilisent première réponse; historique conserve destinataires réellement utilisés.
 
@@ -42,7 +42,7 @@ Documentation Microsoft :
 
 ## Contrat API
 
-POST unique. Auth bootstrap : `startSession`, `verifySession`. Données : `listRequests`, `getRequest`, `updateRequest`, `cancelEvent`, `getCancellationStatus`. `updateRequest` applique concurrence optimiste et crée une tâche Approval distincte par équipe touchée. `cancelEvent` exige confirmation explicite, enfile suppression idempotente et libère ressources avant recyclage SharePoint.
+POST unique. Auth bootstrap : `startSession`, `verifySession`. `startSession` reçoit `challengeId` UUID stable; retry même challenge ne renvoie pas email. `verifySession` transforme ligne OTP pendante correspondant au compte et code en session, sans invalider autres onglets/appareils. Données : `listRequests`, `getRequest`, `updateRequest`, `cancelEvent`, `getCancellationStatus`. Chaque appel porte `clientRequestId`; réponse expose même corrélation sans email, OTP ou token. `updateRequest` applique concurrence optimiste et crée une tâche Approval distincte par équipe touchée. `cancelEvent` exige confirmation explicite, enfile suppression idempotente et libère ressources avant recyclage SharePoint.
 
 `clientContext` sert uniquement affichage. Identité pilote provient adresse email OTP vérifiée. Concurrence : `expectedRevision`; conflit HTTP 409 `REVISION_CONFLICT` avant toute annulation ou création.
 
@@ -52,6 +52,7 @@ Définitions opérationnelles générées depuis dossier parent `Eventvs` :
 - `build_team_approval.py` : un run et une Approval par tâche/équipe;
 - `build_approval_summary_sync.py` : agrégation tâche → demande, trois tentatives avec relecture complète et ETag;
 - `build_portal_api.py` : remplacement ciblé, `CancelFlowRun`, réponse `approvalChanges`;
+- `build_portal_sessions_provisioner.py` / `build_portal_session_cleanup.py` : schéma multi-session, migration legacy et purge quotidienne;
 - `migrate_initial_approval_tasks.py` : rattachement idempotent Approvals initiales depuis historique, sans recréation;
 - `build_cancellation_provisioner.py` / `build_delete_event.py` : tombstone, IDs Outlook exacts et worker suppression;
 - `instrument_event_flow_cancellation.py` : enregistrement runs initiaux et réservations futures;

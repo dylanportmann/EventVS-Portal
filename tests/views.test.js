@@ -92,6 +92,14 @@ describe('views', () => {
     expect(html).toContain('autocomplete="one-time-code"');
   });
 
+  it('renders OTP progress and resend cooldown without disabling code entry', () => {
+    const html = otpView({ email: 'dylan.portmann@epfl.ch', status: 'Envoi en cours', sending: true, retryAfter: 42 });
+    expect(html).toContain('Envoi en cours');
+    expect(html).toContain('Renvoyer dans 42 s');
+    expect(html).toMatch(/data-action="resend-otp" disabled/);
+    expect(html).not.toMatch(/type="submit" disabled/);
+  });
+
   it('renders destructive action only when backend authorizes it', () => {
     const request = {
       id: '42', revision: 2, title: 'Event', status: 'Validé', dateStart: '2026-09-01', startTime: '09:00', endTime: '17:00',

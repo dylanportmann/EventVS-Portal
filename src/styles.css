@@ -68,6 +68,7 @@ a { color: inherit; }
 .otp-form { display: grid; gap: 12px; width: min(320px, 100%); margin: 0 auto 10px; text-align: left; }
 .otp-form label { color: #565e6b; font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .otp-code { min-height: 54px; text-align: center; font-size: 24px; font-weight: 800; letter-spacing: .25em; }
+.otp-status { min-height: 18px; margin: -10px auto 14px; color: #565e6b; font-size: 13px; }
 .otp-error { margin: -10px auto 18px; padding: 11px 13px; border-radius: 9px; background: var(--red-soft); color: #91251f; font-size: 13px; }
 
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }

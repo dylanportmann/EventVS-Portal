@@ -1,27 +1,44 @@
 export class ApiError extends Error {
-  constructor(message, { status = 0, code = 'API_ERROR', details = null } = {}) {
+  constructor(message, {
+    status = 0,
+    code = 'API_ERROR',
+    details = null,
+    clientRequestId = '',
+    retryAfter = 0,
+  } = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.details = details;
+    this.clientRequestId = clientRequestId;
+    this.retryAfter = Number(retryAfter) || 0;
   }
 }
 
 export class EventVsApi {
-  constructor({ apiUrl, sessionProvider = () => '', fetchImpl = fetch, timeout = 30000 }) {
+  constructor({
+    apiUrl,
+    sessionProvider = () => '',
+    fetchImpl = fetch,
+    timeout = 30000,
+    authTimeout = 75000,
+    idFactory = () => globalThis.crypto.randomUUID(),
+  }) {
     this.apiUrl = apiUrl;
     this.sessionProvider = sessionProvider;
     this.fetchImpl = fetchImpl;
     this.timeout = timeout;
+    this.authTimeout = authTimeout;
+    this.idFactory = idFactory;
   }
 
-  startSession(email) {
-    return this.callPublic('startSession', { email });
+  startSession(email, challengeId) {
+    return this.callPublic('startSession', { email, challengeId }, { timeout: this.authTimeout });
   }
 
-  verifySession(email, code) {
-    return this.callPublic('verifySession', { email, code });
+  verifySession(email, code, challengeId = '') {
+    return this.callPublic('verifySession', { email, code, challengeId }, { timeout: this.authTimeout });
   }
 
   listRequests(payload = {}) {
@@ -64,13 +81,15 @@ export class EventVsApi {
     return this.request({ action, ...body, sessionToken });
   }
 
-  callPublic(action, body = {}) {
-    return this.request({ action, ...body });
+  callPublic(action, body = {}, options = {}) {
+    return this.request({ action, ...body }, options);
   }
 
-  async request(payload) {
+  async request(payload, { timeout = this.timeout } = {}) {
+    const clientRequestId = payload.clientRequestId || this.idFactory();
+    const requestPayload = { ...payload, clientRequestId };
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeout);
+    const timer = setTimeout(() => controller.abort(), timeout);
     let response;
 
     try {
@@ -83,25 +102,45 @@ export class EventVsApi {
           'Content-Type': 'text/plain;charset=UTF-8',
           Accept: 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(requestPayload),
         mode: 'cors',
         credentials: 'omit',
         signal: controller.signal,
       });
     } catch (error) {
       if (error.name === 'AbortError') {
-        throw new ApiError('API trop lente. Réessaie.', { code: 'TIMEOUT' });
+        throw new ApiError('Traitement Power Automate toujours en cours.', {
+          code: 'TIMEOUT',
+          clientRequestId,
+        });
       }
-      throw new ApiError('API Event VS inaccessible.', { code: 'NETWORK_ERROR', details: error.message });
+      throw new ApiError('API Event VS inaccessible.', {
+        code: 'NETWORK_ERROR',
+        details: error.message,
+        clientRequestId,
+      });
     } finally {
       clearTimeout(timer);
     }
 
-    const responsePayload = await response.json().catch(() => ({}));
+    const rawResponse = await response.text();
+    let responsePayload = {};
+    try {
+      responsePayload = rawResponse ? JSON.parse(rawResponse) : {};
+    } catch {
+      responsePayload = {};
+    }
     if (!response.ok || responsePayload.ok === false) {
       const code = responsePayload.error?.code || (response.status === 409 ? 'REVISION_CONFLICT' : 'HTTP_ERROR');
       const message = responsePayload.error?.message || this.messageForStatus(response.status);
-      throw new ApiError(message, { status: response.status, code, details: responsePayload.error?.details });
+      const details = responsePayload.error?.details || null;
+      throw new ApiError(message, {
+        status: response.status,
+        code,
+        details,
+        clientRequestId: responsePayload.meta?.clientRequestId || clientRequestId,
+        retryAfter: details?.retryAfter,
+      });
     }
     return responsePayload.data ?? responsePayload;
   }

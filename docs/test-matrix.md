@@ -7,6 +7,13 @@
 
 ## Auth et transport
 
+- Deux onglets/appareils même compte gardent deux sessions valides pendant 8 h; seconde connexion n’invalide pas première.
+- Deux `startSession` avec même `challengeId` créent une ligne et un email; réponse retry porte `reused=true`.
+- Nouveau challenge sous 60 secondes → 429 avec `retryAfter`; échec Outlook → 502 et retry autorisé.
+- Timeout navigateur conserve challenge/formulaire; code reçu reste vérifiable sans second envoi.
+- `SESSION_EXPIRED` arrête polling et ouvre une seule vérification OTP.
+- `clientRequestId` corrèle navigateur/run sans email, OTP ni token visible.
+
 - Sans `Authorization` → 401, aucune exécution métier.
 - Jeton autre tenant → 401/403.
 - Utilisateur EPFL hors allowed users → 403.
