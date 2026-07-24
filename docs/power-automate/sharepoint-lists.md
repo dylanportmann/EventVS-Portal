@@ -37,11 +37,14 @@ Activer index SharePoint sur `StatutGlobal`, `DateEvent`, `DerniereActionUtc`, `
 | `Revision` | Nombre entier |
 | `RequestedUtc`, `DeliveredUtc`, `RespondedUtc`, `ObsoletedUtc`, `CanceledUtc` | Date/heure |
 | `RoutingComplete` | Oui/non; porté par tâche Event initiale après routage technique |
+| `WatcherStatus` | `Native`, `Queued`, `Watching`, `Completed`, `Ignored` ou `Failed` |
+| `WatcherRunId` | Run du watcher historique; jamais exposé API |
+| `WatcherStartedUtc`, `WatcherCompletedUtc` | Dates surveillance historique |
 | `Response`, `Comment`, `Responder`, `Error` | Audit réponse/erreur |
 | `ReplacesTaskKey`, `SupersededByTaskKey` | Chaîne remplacement |
 | `PayloadJson` | Titre, motif, acteur; JSON brut |
 
-`Title` indexé avec `EnforceUniqueValues=true`; `RequestId` indexé pour lectures portail/synchronisation. Une réponse compte seulement si cinq corrélations `requestId + team + revision + taskKey + scopeHash` correspondent et tâche reste `Pending`.
+`Title` indexé avec `EnforceUniqueValues=true`; `RequestId` indexé pour lectures portail/synchronisation. Une réponse compte seulement si cinq corrélations `requestId + team + revision + taskKey + scopeHash` correspondent et tâche reste `Pending`. Watcher historique vérifie aussi clé courante stockée dans résumé demande.
 
 ## EventVSHistory
 

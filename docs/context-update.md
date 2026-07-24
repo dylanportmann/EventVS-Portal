@@ -1,6 +1,6 @@
 # Contexte de reprise
 
-Dernière mise à jour : 23 juillet 2026.
+Dernière mise à jour : 24 juillet 2026.
 
 Sources portail : `/Users/dportman/Desktop/Eventvs/EventVS-Portal`.
 
@@ -19,6 +19,9 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 - liste, détail et édition SharePoint actifs;
 - liste `EventVS Approval Tasks` active, ID `4bcbef74-433a-4166-a02d-452c5c461994`;
 - flux enfant `EventVS Team Approval` actif, ID `a120b719-5232-4cd6-9386-94913b427b05`;
+- flux `EventVS Approval Summary Sync` actif, ID `5ff9b6f1-d404-4181-94f1-b2bda03c29e2`;
+- flux `EventVS Approval Response Watcher` actif, ID `44651d66-275b-4857-843e-377399e4b826`; surveille seulement Approvals historiques `Queued`;
+- dossier 8 corrigé : IT approuvé par Dylan à 11:53, global `Étude technique`, attente Infra seule;
 - connexion `Power Automate Management` intégrée active et flux API remplacé;
 - formulaire public avec brouillon local/autosave et expiration 30 jours déployé;
 - recette réelle Infra validée : deux runs obsolètes annulés, nouvelle Approval approuvée, statut global `Validé`;

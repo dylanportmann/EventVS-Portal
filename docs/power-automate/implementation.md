@@ -80,12 +80,13 @@ Avant fin routage, équipe sans tâche = `À venir`. Après `RoutingComplete=tru
 
 ## `updateRequest` et flux enfant
 
-Quatre composants :
+Cinq composants :
 
 1. `EventVS Portal API` modifie demande et enfile tâches.
 2. Liste `EventVS Approval Tasks` porte état/audit de chaque équipe.
 3. `EventVS Team Approval`, déclenché sur création item, crée exactement une Approval puis attend réponse dans run isolé.
 4. `EventVS Approval Summary Sync`, déclenché sur modification tâche, relit toutes tâches et écrit résumé demande avec trois lectures/écritures ETag séquentielles.
+5. `EventVS Approval Response Watcher` attend, par Approval ID existant, réponses des demandes historiques démarrées avant instrumentation. Il ne crée aucune Approval.
 
 Ordre transactionnel :
 
@@ -118,6 +119,8 @@ AND task.scopeHash == demande.approvalState[team].scopeHash
 ```
 
 Sinon : tâche `Obsolete`, journal `Réponse tardive ignorée`, demande inchangée. Tâches restent source autoritative; synchronisation agrège depuis relecture complète. Chaque conflit ETag déclenche nouvelle relecture, maximum trois tentatives.
+
+Flux natifs portent `WatcherStatus=Native`. Backfill ouvert porte `Queued`; watcher réclame tâche avec ETag, vérifie `approvalState[team].taskKey`, attend réponse officielle, puis écrit réponse avec trois tentatives. Révision non courante reste inchangée.
 
 ## Résultat final
 

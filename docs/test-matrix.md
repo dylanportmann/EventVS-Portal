@@ -66,6 +66,8 @@
 
 - `python3 verify_approval_flows.py` : parent sans Approval groupée, quatre routes tâches, enfant une Approval/run, résumé task-driven avec trois tentatives ETag.
 - `python3 migrate_initial_approval_tasks.py --har <frais> --apply` : tâches initiales manquantes créées depuis IDs/réponses exacts historique; deuxième exécution crée zéro ligne.
+- `EventVS Approval Response Watcher` : tâche historique `Queued` utilise Approval ID existant, zéro `CreateAnApproval`, réponse écrite sous une minute puis visible sous 15 secondes.
+- Watcher historique : clé non courante ignorée; Approval et statut historique restent inchangés.
 - `npm run migration:plan -- export.json` : IDs groupés à annuler manuellement, tâches séparées à recréer, validations conservées.
 - Cycle réel pilote : Outlook → Approval → liste tâches → demande → portail sous 15 secondes.
 
