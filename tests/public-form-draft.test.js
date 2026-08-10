@@ -10,8 +10,8 @@ let dom;
 
 afterEach(() => dom?.window.close());
 
-function loadForm() {
-  const html = fs.readFileSync(sourcePath, 'utf8').replace('__RESOURCE_CATALOG__', '{}');
+function loadForm(catalog = {}) {
+  const html = fs.readFileSync(sourcePath, 'utf8').replace('__RESOURCE_CATALOG__', JSON.stringify(catalog));
   const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: 501 }), { status: 200 }));
   dom = new JSDOM(html, {
     url: 'https://eventvs.example.test/form',
@@ -88,5 +88,30 @@ describe.skipIf(!workspaceFilesAvailable)('workspace public form draft', () => {
     expect(flow).toContain('eventvs.public-request-draft.v1');
     expect(flow).toContain('DRAFT_MAX_AGE_MS');
     expect(flow).toContain('Salles et espaces traiteur non restaur');
+    expect(flow).toContain("seats+' places assises'");
+  });
+
+  it('shows seated places for rooms instead of safety capacity', () => {
+    const catalog = {
+      'i174i2@epfl.ch': { name: 'Emosson', category: 'Salle de conférence', seats: '18' },
+      'i174i3@epfl.ch': { name: 'Cafeteria', category: 'Espace traiteur', seats: 'Variable' },
+    };
+    const { window, document } = loadForm(catalog);
+
+    window.renderResources(
+      [{ smtp: 'I174I2@epfl.ch', nom: 'Emosson', cap: 30 }],
+      'salles',
+      'rsel',
+      'Aucune salle',
+    );
+    expect(document.querySelector('#salles .resource-cap').textContent).toBe(' - 18 places assises');
+
+    window.renderResources(
+      [{ smtp: 'I174I3@epfl.ch', nom: 'Cafeteria', cap: 50 }],
+      'cateringSpaces',
+      'csel',
+      'Aucun espace',
+    );
+    expect(document.querySelector('#cateringSpaces .resource-cap').textContent).toBe(' - capacité 50 pers.');
   });
 });

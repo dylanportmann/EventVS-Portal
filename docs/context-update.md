@@ -1,6 +1,6 @@
 # Contexte de reprise
 
-Dernière mise à jour : 24 juillet 2026.
+Dernière mise à jour : 10 août 2026.
 
 Sources portail : `/Users/dportman/Desktop/Eventvs/EventVS-Portal`.
 
@@ -32,6 +32,7 @@ Production cible : `https://dylanportmann.github.io/EventVS-Portal/`.
 - dossier 8 corrigé : IT approuvé par Dylan à 11:53, global `Étude technique`, attente Infra seule;
 - connexion `Power Automate Management` intégrée active et flux API remplacé;
 - formulaire public avec brouillon local/autosave et expiration 30 jours déployé;
+- formulaire public : cartes salles affichent désormais nombre de places assises (`50, 18, 28, 20, 20, 55`); capacité sécurité reste inchangée dans fiche et contrôles backend;
 - recette réelle Infra validée : deux runs obsolètes annulés, nouvelle Approval approuvée, statut global `Validé`;
 - migration pilote inspectée : seule ancienne Approval groupée déjà terminée/refusée, donc aucune carte ouverte à annuler ou tâche à recréer;
 - annulation complète déployée : bouton confirmé, job asynchrone, annulation runs, suppression Outlook par ID exact, corbeille SharePoint et tombstone minimal;
